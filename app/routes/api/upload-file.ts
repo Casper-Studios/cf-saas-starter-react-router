@@ -1,7 +1,7 @@
-import { type ActionFunctionArgs } from "react-router";
 import { uploadToR2 } from "@/repositories/bucket";
+import type { Route } from "./+types/upload-file";
 
-export async function action({ request, context }: ActionFunctionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const bucket = context.cloudflare.env.BUCKET;
 
   if (!bucket) {
@@ -17,7 +17,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
   try {
     const key = await uploadToR2(bucket, file);
-    return Response.json({ success: true, key });
+    return { success: true, key };
   } catch (error) {
     console.error("Upload failed:", error);
     throw new Response(
