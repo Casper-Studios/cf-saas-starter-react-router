@@ -32,13 +32,18 @@ export const createTRPCContext = async (opts: {
 }) => {
   const db = await getDb(opts.database);
   const authApi = opts.auth.api;
-  const session = await authApi.getSession({
+  const auth = await authApi.getSession({
     headers: opts.headers,
   });
 
   return {
     authApi,
-    session,
+    auth: auth
+      ? {
+          session: auth?.session,
+          user: auth?.user,
+        }
+      : null,
     db,
   };
 };
@@ -118,13 +123,17 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
 export const protectedProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.session?.user) {
+    if (!ctx.auth) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
+
     return next({
       ctx: {
-        // infers the `session` as non-nullable
-        session: { ...ctx.session, user: ctx.session.user },
+        ...ctx,
+        auth: {
+          session: ctx.auth.session!,
+          user: ctx.auth.user!,
+        },
       },
     });
   });

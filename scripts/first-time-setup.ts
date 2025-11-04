@@ -69,51 +69,67 @@ function replaceHandlebarsInFile(
   console.log(`\x1b[32m✓ Updated ${path.basename(filePath)}\x1b[0m`);
 }
 
-function createWranglerToml(
+function createWranglerJson(
   projectName: string,
   dbName: string,
   dbId: string,
   bucketName: string
 ) {
-  const wranglerTomlPath = path.join(__dirname, "..", "wrangler.toml");
+  const wranglerJsonPath = path.join(__dirname, "..", "wrangler.jsonc");
 
-  const tomlContent = `# [secrets]
-# BETTER_AUTH_SECRET
+  const wranglerConfig = {
+    name: projectName,
+    main: "workers/app.ts",
+    compatibility_date: "2025-03-25",
+    compatibility_flags: ["nodejs_compat"],
+    assets: {
+      directory: "build/client",
+      binding: "ASSETS",
+    },
+    placement: {
+      mode: "smart",
+    },
+    d1_databases: [
+      {
+        binding: "DATABASE",
+        database_name: dbName,
+        database_id: dbId,
+        migrations_dir: "./drizzle",
+      },
+    ],
+    r2_buckets: [
+      {
+        binding: "BUCKET",
+        bucket_name: bucketName,
+      },
+    ],
+    workflows: [
+      {
+        binding: "EXAMPLE_WORKFLOW",
+        name: `${projectName}-example-workflow`,
+        class_name: "ExampleWorkflow",
+      },
+    ],
+    ai: {
+      binding: "AI",
+    },
+    observability: {
+      logs: {
+        enabled: true,
+        head_sampling_rate: 1,
+        invocation_logs: true,
+        persist: true,
+      },
+    },
+  };
 
-name = "${projectName}"
-main = ".open-next/worker.js"
-compatibility_date = "2025-03-25"
-compatibility_flags = ["nodejs_compat"]
+  const jsonContent =
+    "// Secrets to be set via 'wrangler secret put BETTER_AUTH_SECRET'\n" +
+    JSON.stringify(wranglerConfig, null, 2) +
+    "\n";
 
-[assets]
-directory = ".open-next/assets"
-binding = "ASSETS"
-
-[placement]
-mode = "smart"
-
-[[d1_databases]]
-binding = "DATABASE"
-database_name = "${dbName}"
-database_id = "${dbId}"
-migrations_dir = "./drizzle"
-
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "${bucketName}"
-
-[ai]
-binding = "AI"
-
-[observability.logs]
-enabled = true
-head_sampling_rate = 1
-invocation_logs = true
-persist = true
-`;
-
-  fs.writeFileSync(wranglerTomlPath, tomlContent);
-  console.log("\x1b[32m✓ Created wrangler.toml\x1b[0m");
+  fs.writeFileSync(wranglerJsonPath, jsonContent);
+  console.log("\x1b[32m✓ Created wrangler.jsonc\x1b[0m");
 }
 
 function extractAccountDetails(output: string): { name: string; id: string }[] {
@@ -449,8 +465,8 @@ async function main() {
   // Step 4: Create configuration files
   console.log("\n\x1b[36m📝 Step 4: Creating Configuration Files\x1b[0m");
 
-  // Create wrangler.toml from scratch
-  createWranglerToml(projectName, dbName, dbId, bucketName);
+  // Create wrangler.jsonc from scratch
+  createWranglerJson(projectName, dbName, dbId, bucketName);
 
   // Update package.json with database name
   const packageJsonPath = path.join(__dirname, "..", "package.json");
@@ -496,7 +512,7 @@ async function main() {
       // Build the application
       const buildSpinner = spinner();
       buildSpinner.start("Building application...");
-      const buildResult = executeCommand("bun run build:cloudflare", true);
+      const buildResult = executeCommand("bun run deploy", true);
 
       if (buildResult && typeof buildResult === "object" && buildResult.error) {
         buildSpinner.stop("\x1b[31m✗ Build failed\x1b[0m");

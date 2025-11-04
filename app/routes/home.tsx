@@ -24,7 +24,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   const hello = await context.trpc.example.hello();
 
   return {
-    message: context.cloudflare.env.VALUE_FROM_CLOUDFLARE,
+    message: "Hello World",
     user,
     hello,
   };

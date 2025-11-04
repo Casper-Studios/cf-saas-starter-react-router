@@ -13,6 +13,7 @@ const userRouter = createTRPCRouter({
     return await ctx.db.query.user.findMany();
   }),
   getUsersProtected: protectedProcedure.query(async ({ ctx }) => {
+    console.log(ctx.auth);
     return await ctx.db.query.user.findMany();
   }),
 });
