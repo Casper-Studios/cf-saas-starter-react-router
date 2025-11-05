@@ -12,6 +12,7 @@
 .wrangler
 .dev.vars*
 worker-configuration.d.ts
+wrangler.jsonc
 
 
 !.dev.vars.example

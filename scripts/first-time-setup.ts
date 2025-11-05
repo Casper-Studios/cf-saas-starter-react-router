@@ -132,6 +132,29 @@ function createWranglerJson(
   console.log("\x1b[32m✓ Created wrangler.jsonc\x1b[0m");
 }
 
+function removeWranglerFromGitignore() {
+  const gitignorePath = path.join(__dirname, "..", ".gitignore");
+
+  if (!fs.existsSync(gitignorePath)) {
+    console.log("\x1b[33m⚠ .gitignore not found, skipping...\x1b[0m");
+    return;
+  }
+
+  let content = fs.readFileSync(gitignorePath, "utf-8");
+  const lines = content.split("\n");
+
+  // Remove the line that contains only "wrangler.jsonc" (with optional whitespace)
+  const filteredLines = lines.filter(
+    (line) => line.trim() !== "wrangler.jsonc"
+  );
+
+  // Only write if something changed
+  if (filteredLines.length !== lines.length) {
+    fs.writeFileSync(gitignorePath, filteredLines.join("\n"));
+    console.log("\x1b[32m✓ Removed wrangler.jsonc from .gitignore\x1b[0m");
+  }
+}
+
 function extractAccountDetails(output: string): { name: string; id: string }[] {
   const lines = output.split("\n");
   const accountDetails: { name: string; id: string }[] = [];
@@ -467,6 +490,9 @@ async function main() {
 
   // Create wrangler.jsonc from scratch
   createWranglerJson(projectName, dbName, dbId, bucketName);
+
+  // Remove wrangler.jsonc from .gitignore since it's now configured
+  removeWranglerFromGitignore();
 
   // Update package.json with database name
   const packageJsonPath = path.join(__dirname, "..", "package.json");
