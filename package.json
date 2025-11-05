@@ -1,5 +1,5 @@
 {
-  "name": "react-router-test",
+  "name": "{{projectName}}",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,8 +14,8 @@
     "auth:generate": "bunx --bun @better-auth/cli generate --config auth.config.ts",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply react-router-test-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply react-router-test-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply {{dbName}} --local",
+    "db:migrate:remote": "wrangler d1 migrations apply {{dbName}} --remote",
     "setup": "bun run scripts/first-time-setup.ts"
   },
   "dependencies": {
