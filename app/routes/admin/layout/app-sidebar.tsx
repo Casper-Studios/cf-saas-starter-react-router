@@ -50,6 +50,11 @@ const data = {
       icon: IconUsers,
     },
     {
+      title: "Docs",
+      url: "/admin/docs",
+      icon: IconFileDescription,
+    },
+    {
       title: "Kitchen Sink",
       url: "/admin/kitchen-sink",
       icon: IconSettings,
