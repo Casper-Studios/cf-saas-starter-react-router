@@ -11,7 +11,7 @@ import { createAuth, type Auth } from "@/auth/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z, ZodError } from "zod/v4";
-import type { ExampleWorkflowRequestPayload } from "workflows/example";
+import { loggers } from "@/lib/logger";
 
 /**
  * 1. CONTEXT
@@ -95,6 +95,9 @@ export const createTRPCRouter = t.router;
  */
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
+  const log = loggers.trpc.child({ path });
+
+  log.debug("Procedure starting");
 
   if (t._config.isDev) {
     // artificial delay in dev 100-500ms
@@ -104,8 +107,8 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 
   const result = await next();
 
-  const end = Date.now();
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
+  const durationMs = Date.now() - start;
+  log.info({ durationMs }, "Procedure complete");
 
   return result;
 });
