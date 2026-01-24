@@ -167,6 +167,13 @@ test.describe("{Feature Name}", () => {
 
 ### Step 5: Create Test Results Document
 
+Create test results in two locations:
+
+1. **Testing Results**: `.cursor/testing-results/{feature-name}-results.md` (internal tracking)
+2. **Feature Documentation**: `docs/features/{feature-name}-testing.md` (permanent documentation with screenshots)
+
+#### Internal Testing Results
+
 Create `.cursor/testing-results/{feature-name}-results.md`:
 
 ```markdown
@@ -218,6 +225,57 @@ Test file: `tests/e2e/{feature-name}.spec.ts`
 | `should {test name}` | {What it verifies} |
 ```
 
+#### Feature Documentation with Screenshots
+
+Create `docs/features/{feature-name}-testing.md` with images:
+
+```markdown
+# {Feature Name} - Test Summary
+
+## Overview
+Summary of the feature and what was tested.
+
+## Test Results
+
+| Test Case | Status | Description |
+|-----------|--------|-------------|
+| {Test name} | ✅ | {What it verifies} |
+
+## Screenshots
+
+### {Scenario 1 Name}
+![{Description}](../assets/{feature-name}-scenario-1.png)
+
+{Description of what this screenshot shows}
+
+### {Scenario 2 Name}
+![{Description}](../assets/{feature-name}-scenario-2.png)
+
+{Description of what this screenshot shows}
+
+## E2E Test Coverage
+
+Test file: `e2e/{feature-name}.spec.ts`
+
+### Running Tests
+
+\`\`\`bash
+# Run all tests
+bun run test:e2e
+
+# Run specific feature tests
+bunx playwright test e2e/{feature-name}.spec.ts
+\`\`\`
+
+## Key Test IDs
+
+| Element | Test ID |
+|---------|---------|
+| {Element} | `{data-testid}` |
+```
+
+**Screenshots should be saved to:** `docs/assets/` folder
+
 ## Checklist
 
 Before marking testing complete:
@@ -226,10 +284,12 @@ Before marking testing complete:
 - [ ] All scenarios manually verified with Playwright MCP
 - [ ] Screenshots taken for each scenario
 - [ ] Issues found during testing have been fixed
-- [ ] E2E test file created in `tests/e2e/`
+- [ ] E2E test file created in `e2e/`
 - [ ] All e2e tests pass locally
 - [ ] Data-testid attributes added to key elements
 - [ ] Test results document created in `.cursor/testing-results/`
+- [ ] **Feature documentation with screenshots created in `docs/features/`**
+- [ ] **Screenshots saved to `docs/assets/`**
 
 ## Quick Reference: Playwright MCP Tools
 

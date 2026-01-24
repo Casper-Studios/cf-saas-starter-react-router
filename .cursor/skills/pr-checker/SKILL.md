@@ -56,6 +56,7 @@ For each changed file, verify it follows the appropriate rule based on file loca
 | `**/stripe*`, `**/payment*` | `stripe.mdc` |
 | `e2e/**/*` | `playwright-rules.mdc` |
 | `app/lib/constants/*` | `constants.mdc` |
+| `docs/**/*.md` | `docs.mdc` |
 
 ### Verification Process
 
@@ -79,6 +80,12 @@ For each changed file, verify it follows the appropriate rule based on file loca
 **Route files:**
 - ❌ Missing loader authentication check
 - ❌ Not using `context.trpc` for data fetching
+
+**Documentation files (docs/*.md):**
+- ❌ Missing H1 title
+- ❌ Wrong naming convention (meetings should be `YYYY-MM-DD-*.md`, releases should be `vX.Y.Z.md` or date-prefixed)
+- ❌ File in wrong category folder
+- ❌ Missing required sections for category (e.g., releases need Summary, New Features, Bug Fixes)
 
 ---
 
@@ -119,24 +126,44 @@ Add to the `## Recent Changes` section:
 
 ---
 
-## Step 4: Verify Testing Plan Exists
+## Step 4: Verify Testing Exists
 
-Check for testing documentation:
+Check for testing artifacts:
 
 ```bash
+# Check for e2e test files
+ls -la e2e/*.spec.ts 2>/dev/null
+
+# Check for test documentation
+ls -la docs/features/*-testing.md 2>/dev/null
+
 # Check for testing plan files
-ls -la test-results/ 2>/dev/null
-ls -la TEST_PLAN.md TESTING.md 2>/dev/null
+ls -la .cursor/testing-plans/*.md 2>/dev/null
 ```
 
-### If No Testing Plan Found
+### Required Testing Artifacts
 
-**Prompt user:** "No testing plan found. Before creating the PR, run the `tester` subagent to generate a testing plan and verify the implementation."
+For feature PRs, the following should exist:
 
-The testing plan should include:
-- Test scenarios for the feature
-- Steps to verify functionality
-- Expected outcomes
+1. **E2E Tests**: `e2e/{feature}.spec.ts`
+   - Tests for happy path
+   - Tests for edge cases
+   - Tests for error states
+
+2. **Test Documentation**: `docs/features/{feature}-testing.md`
+   - Test results summary
+   - E2E test coverage list
+   - Key test IDs used
+
+3. **Data-testid Attributes**: Key elements should have `data-testid` for reliable testing
+
+### If No Testing Found
+
+**Prompt user:** "No e2e tests found. Before creating the PR, run the `tester` subagent to:
+1. Verify the implementation with Playwright MCP
+2. Write e2e tests in `e2e/`
+3. Create test documentation in `docs/features/`
+4. Add data-testid attributes to key elements"
 
 ---
 
@@ -217,7 +244,12 @@ Generate a summary:
 
 ### Documentation
 - [✅/❌] context.md updated
-- [✅/❌] Testing plan exists
+- [✅/❌] Test documentation exists (`docs/features/*-testing.md`)
+
+### Testing
+- [✅/❌] E2E tests exist (`e2e/*.spec.ts`)
+- [✅/❌] Data-testid attributes added
+- [✅/❌] All tests pass locally
 
 ### Database
 - [✅/❌] Migration naming convention

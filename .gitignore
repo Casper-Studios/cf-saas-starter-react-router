@@ -16,3 +16,9 @@ worker-configuration.d.ts
 !.dev.vars.example
 !.env.example
 !.cursor/mcp.template.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/e2e/**/*.png

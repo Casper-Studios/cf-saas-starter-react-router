@@ -43,11 +43,49 @@ Pattern: Look for `LAN-` followed by numbers.
 
 Look for any generated testing plans in these locations:
 
-- `test-results/` directory
-- `TEST_PLAN.md` or `TESTING.md` files
+- `e2e/*.spec.ts` - E2E test files
+- `docs/features/*-testing.md` - Test documentation
+- `.cursor/testing-results/` directory
 - Recent conversation context mentioning test scenarios
 
 If a testing plan exists, include its test cases in the PR description.
+
+### Step 3.5: Create Release Documentation (for `feat` PRs)
+
+For feature PRs, create a release document in `docs/releases/`:
+
+**Filename:** `YYYY-MM-DD-feature-name.md` (e.g., `2026-01-24-documentation-viewer.md`)
+
+**Template:**
+
+```markdown
+# Feature Name Release
+
+**Date:** YYYY-MM-DD
+
+## Summary
+Brief description of what this release adds.
+
+## New Features
+- Feature 1 with description
+- Feature 2 with description
+
+## Key Files
+| File | Description |
+|------|-------------|
+| `path/to/file.tsx` | What it does |
+
+## Bug Fixes
+- Fix description (or "None - initial release.")
+
+## Breaking Changes
+- Breaking change (or "None.")
+
+## Dependencies Added
+- `package-name` - What it's used for (if any)
+```
+
+This documents the release for the changelog and provides a historical record.
 
 ### Step 4: Determine PR Type
 
@@ -173,6 +211,7 @@ None
 - [ ] Feature flag created if needed
 - [ ] Code reviewed against conventions
 - [ ] Database migration does NOT delete data
+- [ ] Release doc created in `docs/releases/` (for feat PRs)
 ```
 
 ## MCP Tool Reference

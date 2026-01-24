@@ -1,0 +1,168 @@
+# Documentation Guidelines
+
+Rules for creating and maintaining documentation in the `docs/` folder.
+
+## File Structure
+
+The documentation is organized into categories:
+
+```
+docs/
+├── features/   # Technical feature documentation
+├── ideas/      # Brainstorming and feature ideas
+├── meetings/   # Meeting notes (date-prefixed)
+├── plans/      # Roadmaps and project plans
+└── releases/   # Changelog and release notes
+```
+
+## Naming Conventions
+
+- **meetings:** `YYYY-MM-DD-description.md` (e.g., `2026-01-24-kickoff.md`)
+- **releases:** `vX.Y.Z.md` or `YYYY-MM-DD-release.md` (e.g., `v1.0.0.md`)
+- **others:** `kebab-case.md` (e.g., `authentication.md`, `feature-brainstorm.md`)
+
+## Formatting Standards
+
+### Document Structure
+
+1. **Title:** Use H1 (`#`) for the main document title
+2. **Sections:** Use H2 (`##`) for major sections
+3. **Subsections:** Use H3 (`###`) for subsections
+4. **Keep hierarchy consistent** - don't skip heading levels
+
+### Content Guidelines
+
+- **Mermaid diagrams:** Include for complex flows, architecture, and relationships
+- **Tables:** Use for structured data, comparisons, and specifications
+- **Checklists:** Use `- [ ]` for action items and tasks
+- **Code blocks:** Always specify the language for syntax highlighting
+
+### Example Document Structure
+
+```markdown
+# Document Title
+
+Brief overview of what this document covers.
+
+## Section 1
+
+Content here...
+
+### Subsection 1.1
+
+More detailed content...
+
+## Section 2
+
+More content...
+```
+
+## Category-Specific Templates
+
+### Feature Documentation
+
+```markdown
+# Feature Name
+
+## Overview
+Brief description of the feature.
+
+## How It Works
+Technical explanation with diagrams if needed.
+
+## Usage
+Code examples and usage instructions.
+
+## Key Files
+- `path/to/file.ts` - Description
+```
+
+### Release Notes
+
+```markdown
+# vX.Y.Z (or Release Date)
+
+## Summary
+Brief overview of this release.
+
+## New Features
+- Feature 1 description
+- Feature 2 description
+
+## Bug Fixes
+- Fix 1 description
+- Fix 2 description
+
+## Breaking Changes
+- Breaking change description (if any)
+```
+
+### Meeting Notes
+
+```markdown
+# Meeting Title
+
+**Date:** YYYY-MM-DD
+**Attendees:** Names
+
+## Agenda
+1. Item 1
+2. Item 2
+
+## Discussion
+Summary of discussions...
+
+## Action Items
+- [ ] Task 1 - @assignee
+- [ ] Task 2 - @assignee
+
+## Next Meeting
+Date and topics for next meeting.
+```
+
+### Ideas/Brainstorming
+
+```markdown
+# Idea Title
+
+## Problem
+What problem does this solve?
+
+## Proposed Solution
+Description of the idea...
+
+## Benefits
+- Benefit 1
+- Benefit 2
+
+## Considerations
+- Technical constraints
+- Resource requirements
+```
+
+### Plans/Roadmap
+
+```markdown
+# Plan Title
+
+## Goals
+What we're trying to achieve.
+
+## Timeline
+Phases or milestones with Gantt chart if helpful.
+
+## Tasks
+- Phase 1 tasks
+- Phase 2 tasks
+
+## Success Metrics
+How we'll measure success.
+```
+
+## Best Practices
+
+1. **Be concise:** Write for clarity, not length
+2. **Use visuals:** Mermaid diagrams help explain complex concepts
+3. **Link related docs:** Reference other relevant documentation
+4. **Keep updated:** Remove outdated information
+5. **Version awareness:** Note which version features apply to
