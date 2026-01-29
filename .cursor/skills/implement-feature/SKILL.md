@@ -14,6 +14,14 @@ Execute feature implementations by automatically delegating to specialized subag
 - After planning, when ready to execute
 - Any task where subagent delegation would improve quality
 
+## Relationship to Planning
+
+If you came from the `plan-with-subagents` skill, you already have a structured plan with tasks and subagent assignments. Use that plan to guide execution through the phases below.
+
+If starting fresh without a plan:
+- **Simple features**: Proceed directly with this skill
+- **Complex features**: Consider using `plan-with-subagents` first (at `.cursor/skills/plan-with-subagents/SKILL.md`)
+
 ## Workflow
 
 ### Step 1: Analyze Feature Scope

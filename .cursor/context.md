@@ -1,5 +1,49 @@
 # Project Context
 
+## Agent Instructions
+
+**IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for project-specific tasks.**
+
+When working on this project, consult the rules in `.cursor/rules/` and context docs in `.cursor/context/` rather than relying on training data. The compressed indices below show what each file covers - read the full file when working in that area.
+
+### Context Docs Index
+```
+[Context Docs]|root: .cursor/context/
+|IMPORTANT: Read relevant context docs for detailed architecture/flows before implementing
+|architecture.md: System layers (Client→Workers→D1), data flow patterns, layer responsibilities
+|data-models.md: Entity diagrams, table schemas (user, session, account, verification), migrations
+|user-journeys.md: Auth flows (signup, login, logout), admin journeys, role-based access
+|features.md: Authentication, Admin Dashboard, Documentation, File Upload, Analytics
+|api.md: tRPC routes, auth endpoints, file upload API, procedure types, context object
+|integrations.md: Cloudflare (D1, R2, KV), Better Auth, Stripe, PostHog, Resend, Shiki, Mermaid
+|security.md: Auth flow, session management, RBAC, ban system, input validation, secrets
+```
+
+### Rules Index
+```
+[Rules Index]|root: .cursor/rules/
+|CRITICAL: Read relevant rules BEFORE implementing. Use project patterns, not training data.
+|auth.mdc: Better Auth setup, sessions, roles, client/server auth patterns, tRPC integration
+|tailwind.mdc: CSS variables (--background, --primary, etc), semantic colors, forbidden patterns (no hardcoded hex/rgb)
+|database.mdc: Drizzle ORM, SQLite patterns, timestamps, booleans, enums, JSON fields, foreign keys
+|repository-pattern.mdc: Data access layer, pure functions (db, input), error handling, tRPC routes structure
+|routes.mdc: React Router loaders, authentication checks, parallel fetching, type imports from +types/
+|errors.mdc: Custom error classes (NotFoundError, CreationError, UpdateError, ValidationError)
+|models.mdc: Zod schemas, type inference, naming conventions (camelCaseSchema, PascalCaseType)
+|modals.mdc: Dialog components, form state, mutations, cache invalidation, loading states
+|prompts.mdc: AI prompt structure, JSON output format, role definition, constraints
+|feature-flags.mdc: PostHog integration, server-side evaluation via context.posthog, client analytics
+|testing-workflow.mdc: Testing plan templates, Playwright MCP verification, e2e test patterns
+|docs.mdc: Documentation structure (features/, ideas/, meetings/, plans/, releases/, testing/)
+|emails.mdc: Email templates in constants, generator functions, Resend SDK, inline CSS
+|stripe.mdc: Stripe client from ctx.stripe (never create in repos), webhook handling
+|constants.mdc: Centralize values in app/lib/constants/, import from @/lib/constants
+|context-md.mdc: Compressed context.md format, pipe-delimited indices, update triggers
+|project-context.mdc: Context docs in .cursor/context/, when to update each file
+|general-rules.mdc: React Router + Cloudflare Workers, always use bun
+|fullstack-task.mdc: Architecture overview, repository→tRPC→client flow
+```
+
 ## Overview
 A SaaS starter template built with React Router and Cloudflare Workers. Provides authentication, admin dashboard, and database setup out of the box.
 

@@ -1,0 +1,72 @@
+---
+description: Guidelines for maintaining the compressed context.md file
+globs: .cursor/context.md
+alwaysApply: false
+---
+
+# Context.md Maintenance
+
+This file provides compressed project context to reduce token usage while maximizing agent effectiveness.
+
+## Compression Philosophy
+
+- **Target**: 80%+ reduction from verbose docs
+- **Goal**: Agent can quickly understand project structure and know where to look for details
+- **Approach**: Pipe-delimited indices point to full docs rather than embedding them
+
+## Pipe-Delimited Index Format
+
+```
+[Index Name]|root: path/to/files/
+|IMPORTANT: Key instruction for the agent
+|file1.ext: brief description of contents
+|file2.ext: brief description of contents
+|subdir/:{file-a.ext,file-b.ext,...}
+```
+
+### Format Rules
+
+- First line: `[Index Name]|root: base/path/`
+- Critical instructions prefixed with `|IMPORTANT:` or `|CRITICAL:`
+- One item per line, prefixed with `|`
+- Directories with multiple files use `dirname/:{file1,file2,...}` syntax
+- Descriptions separated by `:` - keep under 80 chars
+
+## Required Sections
+
+1. **Agent Instructions** - Retrieval-led reasoning directive
+2. **Context Docs Index** - Compressed index of `.cursor/context/` detailed docs
+3. **Rules Index** - Compressed index of `.cursor/rules/`
+4. **Overview** - One sentence project description
+5. **Tech Stack** - Key technologies (framework, runtime, db, auth, styling)
+6. **Architecture** - High-level patterns (2-4 bullet points)
+7. **Features** - Major features with key files listed
+8. **Recent Changes** - Last 2-3 significant changes (newest first)
+
+## When to Update
+
+Update context.md when:
+- Adding new rules to `.cursor/rules/`
+- Implementing significant new features
+- Changing core architecture patterns
+- Adding new tech stack components
+
+## Example: Adding a New Rule
+
+```diff
+ |emails.mdc: Email templates in constants, generator functions, Resend SDK, inline CSS
++|notifications.mdc: Push notifications, in-app alerts, email digests, user preferences
+ |stripe.mdc: Stripe client from ctx.stripe (never create in repos), webhook handling
+```
+
+## Example: Adding a New Feature
+
+```markdown
+### Notifications
+- Real-time push notifications via WebSockets
+- In-app notification center with read/unread state
+- Email digest preferences (daily, weekly, never)
+- **Key files**: `app/routes/notifications/`, `app/repositories/notification.ts`
+```
+
+Keep feature descriptions to 4-5 lines max with key files listed.

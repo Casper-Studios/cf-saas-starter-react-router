@@ -13,6 +13,16 @@ Create structured implementation plans that assign appropriate subagents to each
 - Complex tasks requiring multiple files/layers
 - Work that will result in a PR
 
+## Relationship to Implementation
+
+This skill creates **plans**. When the user approves the plan and says to build/implement:
+
+**→ Use the `implement-feature` skill** (at `.cursor/skills/implement-feature/SKILL.md`)
+
+The workflow is:
+1. **Plan** (this skill) → Create structured plan with subagent assignments
+2. **Build** (implement-feature skill) → Execute the plan with automatic subagent delegation
+
 ## Planning Workflow
 
 ### Step 1: Analyze the Work Request
@@ -287,3 +297,18 @@ Run the `pr-checker` skill which validates:
 | UI-only change | generalPurpose → tester |
 | Analytics addition | data-analytics |
 | Schema change | generalPurpose → data-analytics (optional) → tester |
+
+---
+
+## After Planning: Execute with implement-feature
+
+Once the user approves the plan and says "build", "implement", or "let's do it":
+
+1. **Read the implement-feature skill** at `.cursor/skills/implement-feature/SKILL.md`
+2. **Follow its workflow** which handles:
+   - Automatic subagent delegation in dependency order
+   - Figma conversion and validation (if applicable)
+   - Logging, testing, and documentation phases
+3. **Reference this plan** to ensure all tasks are completed
+
+The implement-feature skill will execute the plan systematically, ensuring proper delegation to specialized subagents (tester, logger, context-keeper, data-analytics, etc.).
