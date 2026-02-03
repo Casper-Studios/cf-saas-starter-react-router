@@ -1,14 +1,30 @@
 ---
-description: Guidelines for maintaining the compressed context.md file
-globs: .cursor/context.md
+description: Guidelines for maintaining project context documentation
+globs: .cursor/context.md,.cursor/context/**
 alwaysApply: false
 ---
 
-# Context.md Maintenance
+# Context Documentation Maintenance
 
-This file provides compressed project context to reduce token usage while maximizing agent effectiveness.
+## Documentation Hierarchy
 
-## Compression Philosophy
+**Source of Truth**: `.cursor/context/` folder contains detailed documentation:
+- `api.md` - tRPC routes, auth endpoints, procedure types, error responses
+- `architecture.md` - System overview, data flow patterns, layer responsibilities
+- `high-level-architecture.md` - Living visual doc with route map, feature flows, data relationships, changelog (maintained by architecture-tracker subagent)
+- `data-models.md` - Schema, entity relationships, tables overview, migrations
+- `features.md` - Feature documentation with flow diagrams and key files
+- `integrations.md` - External services (Cloudflare, Better Auth, Stripe, PostHog)
+- `security.md` - Auth flow, session management, authorization, RBAC
+- `user-journeys.md` - User flows, admin journeys, error states
+
+**Quick Reference**: `.cursor/context.md` is a compressed index that:
+- Points agents to detailed docs in `.cursor/context/`
+- Provides compressed indices of rules and context docs
+- Contains brief overview, tech stack summary, and recent changes
+- Enables fast retrieval without reading full documentation
+
+## Compression Philosophy (for context.md)
 
 - **Target**: 80%+ reduction from verbose docs
 - **Goal**: Agent can quickly understand project structure and know where to look for details
@@ -32,7 +48,7 @@ This file provides compressed project context to reduce token usage while maximi
 - Directories with multiple files use `dirname/:{file1,file2,...}` syntax
 - Descriptions separated by `:` - keep under 80 chars
 
-## Required Sections
+## context.md Required Sections
 
 1. **Agent Instructions** - Retrieval-led reasoning directive
 2. **Context Docs Index** - Compressed index of `.cursor/context/` detailed docs
@@ -40,18 +56,36 @@ This file provides compressed project context to reduce token usage while maximi
 4. **Overview** - One sentence project description
 5. **Tech Stack** - Key technologies (framework, runtime, db, auth, styling)
 6. **Architecture** - High-level patterns (2-4 bullet points)
-7. **Features** - Major features with key files listed
-8. **Recent Changes** - Last 2-3 significant changes (newest first)
+7. **Features** - Brief summaries with key files (3-5 lines max)
+8. **Recent Changes** - Last 3-4 significant changes (newest first)
 
 ## When to Update
 
-Update context.md when:
+### Update detailed docs (`.cursor/context/`) when:
+- Implementing new features → `features.md`
+- Adding API routes → `api.md`
+- Changing architecture → `architecture.md`
+- Modifying schema → `data-models.md`
+- Adding integrations → `integrations.md`
+- Changing auth/security → `security.md`
+- New user flows → `user-journeys.md`
+
+### Update context.md index when:
+- A context doc's scope changes (update the index entry)
 - Adding new rules to `.cursor/rules/`
-- Implementing significant new features
-- Changing core architecture patterns
+- Adding significant new features (brief summary)
 - Adding new tech stack components
 
-## Example: Adding a New Rule
+### Update high-level-architecture.md when:
+- Adding new routes (update Route Map + Information Architecture table)
+- Implementing new features (add Feature Flow section)
+- Schema changes (update Data Relationships ER diagram)
+- Architectural decisions (update System Architecture)
+- **Always add a Changelog entry with date**
+
+Use the `architecture-tracker` subagent to maintain this document.
+
+## Example: Adding a New Rule to context.md
 
 ```diff
  |emails.mdc: Email templates in constants, generator functions, Resend SDK, inline CSS
@@ -61,12 +95,31 @@ Update context.md when:
 
 ## Example: Adding a New Feature
 
+First, add detailed documentation to `features.md`:
+
 ```markdown
 ### Notifications
-- Real-time push notifications via WebSockets
-- In-app notification center with read/unread state
-- Email digest preferences (daily, weekly, never)
-- **Key files**: `app/routes/notifications/`, `app/repositories/notification.ts`
+Real-time push notifications and in-app alerts for user engagement.
+
+**Data Model**:
+- `notification` table with type, content, read status, created_at
+- Foreign key to user
+
+**Key Files**:
+- `app/routes/notifications/` - Notification center UI
+- `app/repositories/notification.ts` - Data access
+- `app/trpc/routes/notifications.ts` - API routes
+
+**Flow**:
+[Mermaid diagram here]
 ```
 
-Keep feature descriptions to 4-5 lines max with key files listed.
+Then add a brief summary to context.md Features section:
+
+```markdown
+### Notifications
+Real-time push notifications via WebSockets with in-app notification center.
+**Key files**: `app/routes/notifications/`, `app/repositories/notification.ts`
+```
+
+Keep context.md feature descriptions to 3-5 lines max.

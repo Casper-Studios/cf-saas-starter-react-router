@@ -10,9 +10,11 @@ After implementing a plan or feature, follow this workflow to generate a testing
 
 ## Step 1: Generate Testing Plan
 
-After completing implementation, create a testing plan file at:
+After completing implementation, create a testing plan folder at:
 ```
-.cursor/testing-plans/{feature-name}.md
+docs/testing/{feature-name}/
+├── {feature-name}.md      # Testing plan document
+└── screenshots/           # Playwright screenshots
 ```
 
 ### Testing Plan Template
@@ -38,6 +40,8 @@ Brief description of what was implemented and what needs to be tested.
 3. {Action}
 **Expected Result:** {What should happen}
 
+**Screenshot:** ![{Description}](./screenshots/scenario-1.png)
+
 ### Scenario 2: {Edge Case}
 **Description:** {What this scenario tests}
 **Steps:**
@@ -45,12 +49,16 @@ Brief description of what was implemented and what needs to be tested.
 2. {Action}
 **Expected Result:** {What should happen}
 
+**Screenshot:** ![{Description}](./screenshots/scenario-2.png)
+
 ### Scenario 3: {Error Handling}
 **Description:** {What this scenario tests}
 **Steps:**
 1. {Action}
 2. {Action}
 **Expected Result:** {Error message or validation}
+
+**Screenshot:** ![{Description}](./screenshots/scenario-3.png)
 
 ## UI Elements to Verify
 - [ ] {Element} renders correctly
@@ -67,6 +75,16 @@ Brief description of what was implemented and what needs to be tested.
 - [ ] Keyboard navigation works
 - [ ] Focus states visible
 - [ ] ARIA labels present
+
+## Test IDs Reference
+
+| Element | Test ID |
+|---------|---------|
+| {Element} | `{data-testid}` |
+
+## E2E Test Coverage
+
+Test file: `e2e/{feature-name}.spec.ts`
 ```
 
 ## Step 2: Manual Verification with Playwright MCP
@@ -79,7 +97,15 @@ Use the browser MCP tools to manually verify each scenario:
 2. browser_snapshot → Get accessibility tree of elements
 3. browser_click/type → Interact with elements using refs from snapshot
 4. browser_snapshot → Verify state changed
-5. browser_take_screenshot → Visual verification if needed
+5. browser_take_screenshot → Visual verification (save to testing plan folder)
+```
+
+### Save Screenshots to Testing Plan Folder
+```typescript
+// Save directly to the testing plan's screenshots folder
+browser_take_screenshot({
+  filename: "docs/testing/{feature-name}/screenshots/{scenario}.png"
+})
 ```
 
 ### Example Verification Flow
@@ -95,6 +121,11 @@ mcp_cursor-ide-browser_browser_click({ element: "Button description", ref: "ref-
 
 // 4. Verify result
 mcp_cursor-ide-browser_browser_snapshot()
+
+// 5. Save screenshot to testing plan folder
+mcp_cursor-ide-browser_browser_take_screenshot({
+  filename: "docs/testing/feature-name/screenshots/scenario-1.png"
+})
 ```
 
 ### Common Verification Patterns
@@ -105,6 +136,7 @@ mcp_cursor-ide-browser_browser_snapshot()
 3. Type into each field
 4. Click submit button
 5. Snapshot to verify success state
+6. Screenshot to testing plan folder
 
 **Data Table:**
 1. Navigate to table page
@@ -112,6 +144,7 @@ mcp_cursor-ide-browser_browser_snapshot()
 3. Test search/filter by typing
 4. Snapshot to verify filtered results
 5. Test pagination if applicable
+6. Screenshot to testing plan folder
 
 **Modal Flow:**
 1. Snapshot to get trigger button ref
@@ -120,6 +153,7 @@ mcp_cursor-ide-browser_browser_snapshot()
 4. Fill modal form if applicable
 5. Click action button
 6. Snapshot to verify modal closed and result
+7. Screenshot to testing plan folder
 
 ## Step 3: Fix Issues Found
 
@@ -143,7 +177,7 @@ After manual verification passes, create an e2e test file:
 
 ### Test File Location
 ```
-tests/e2e/{feature-name}.spec.ts
+e2e/{feature-name}.spec.ts
 ```
 
 ### E2E Test Template
@@ -213,189 +247,18 @@ Add `data-testid` attributes to components for reliable test selectors:
 3. **Regression Tests** - Previously broken scenarios
 4. **Edge Case Tests** - Boundary conditions and unusual inputs
 
-## Step 5: Create Test Results Document
-
-After completing all verification, create a results document with screenshots and explanations:
-
-### Results File Location
-```
-.cursor/testing-results/{feature-name}-results.md
-```
-
-### Test Results Template
-
-```markdown
-# Test Results: {Feature Name}
-
-**Date:** {YYYY-MM-DD}
-**Tester:** AI Agent
-**Status:** ✅ Passed / ⚠️ Passed with fixes / ❌ Failed
-
----
-
-## Summary
-
-{Brief summary of what was tested and the overall outcome}
-
-- **Total Scenarios:** {X}
-- **Passed:** {X}
-- **Fixed During Testing:** {X}
-- **Known Issues:** {X}
-
----
-
-## Test Results by Scenario
-
-### Scenario 1: {Scenario Name}
-**Status:** ✅ Passed
-
-**What was tested:**
-{Explanation of what this scenario verifies and why it matters}
-
-**Steps performed:**
-1. {Step description}
-2. {Step description}
-3. {Step description}
-
-**Screenshot:**
-![{Description}](./screenshots/{feature-name}-scenario-1.png)
-
-**Observations:**
-- {What was observed}
-- {Any notable behavior}
-
----
-
-### Scenario 2: {Scenario Name}
-**Status:** ⚠️ Fixed
-
-**What was tested:**
-{Explanation of what this scenario verifies}
-
-**Issue Found:**
-{Description of the issue that was discovered}
-
-**Fix Applied:**
-{Description of the code change made to fix the issue}
-- File: `{path/to/file.tsx}`
-- Change: {Brief description}
-
-**Screenshot (After Fix):**
-![{Description}](./screenshots/{feature-name}-scenario-2-fixed.png)
-
----
-
-### Scenario 3: {Scenario Name}
-**Status:** ✅ Passed
-
-**What was tested:**
-{Explanation - e.g., "Verifies that users see an error message when submitting invalid data"}
-
-**Screenshot:**
-![{Description}](./screenshots/{feature-name}-scenario-3.png)
-
----
-
-## UI Verification
-
-| Element | Status | Notes |
-|---------|--------|-------|
-| {Component/Element} | ✅ | Renders correctly |
-| {Loading state} | ✅ | Shows spinner during fetch |
-| {Empty state} | ✅ | Displays helpful message |
-| {Error state} | ✅ | Shows error with retry option |
-
----
-
-## Issues Fixed During Testing
-
-### Issue 1: {Issue Title}
-- **File:** `{path/to/file}`
-- **Problem:** {Description}
-- **Solution:** {What was changed}
-
-### Issue 2: {Issue Title}
-- **File:** `{path/to/file}`
-- **Problem:** {Description}
-- **Solution:** {What was changed}
-
----
-
-## E2E Test Coverage
-
-Test file created: `tests/e2e/{feature-name}.spec.ts`
-
-| Test Case | Description |
-|-----------|-------------|
-| `should {test name}` | {What it verifies} |
-| `should {test name}` | {What it verifies} |
-| `should {test name}` | {What it verifies} |
-
----
-
-## Recommendations
-
-{Any recommendations for future improvements or things to watch out for}
-
----
-
-## Screenshots Directory
-
-All screenshots saved to: `.cursor/testing-results/screenshots/`
-```
-
-### Screenshot Naming Convention
-
-Save screenshots with descriptive names:
-```
-{feature-name}-{scenario}-{state}.png
-
-Examples:
-- client-profile-initial-load.png
-- client-profile-edit-modal-open.png
-- client-profile-save-success.png
-- client-profile-validation-error.png
-```
-
-### Taking Screenshots During Testing
-
-Use `browser_take_screenshot` at key moments:
-
-```typescript
-// After page load
-mcp_cursor-ide-browser_browser_take_screenshot({
-  filename: "feature-name-initial-load.png"
-})
-
-// After action
-mcp_cursor-ide-browser_browser_take_screenshot({
-  filename: "feature-name-after-submit.png"
-})
-
-// Error state
-mcp_cursor-ide-browser_browser_take_screenshot({
-  filename: "feature-name-error-state.png"
-})
-
-// Full page capture
-mcp_cursor-ide-browser_browser_take_screenshot({
-  filename: "feature-name-full-page.png",
-  fullPage: true
-})
-```
-
 ## Checklist
 
 Before marking implementation complete:
 
-- [ ] Testing plan created in `.cursor/testing-plans/`
+- [ ] Testing plan created at `docs/testing/{feature-name}/{feature-name}.md`
+- [ ] Screenshots folder created at `docs/testing/{feature-name}/screenshots/`
 - [ ] All scenarios manually verified with Playwright MCP
-- [ ] Screenshots taken for each scenario
+- [ ] Screenshots taken and saved to testing plan folder
 - [ ] Issues found during testing have been fixed
-- [ ] E2E test file created in `tests/e2e/`
+- [ ] E2E test file created in `e2e/`
 - [ ] All e2e tests pass locally
 - [ ] Data-testid attributes added to key elements
-- [ ] Test results document created in `.cursor/testing-results/`
 
 ## Quick Reference: Playwright MCP Tools
 

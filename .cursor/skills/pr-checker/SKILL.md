@@ -7,6 +7,12 @@ description: Validate pull requests against project standards before submission.
 
 Validate that changes follow project standards before creating a pull request.
 
+## Rules Reference
+
+**IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning.**
+
+Read `.cursor/context.md` for the compressed Rules Index. When validating files, read the full rule from `.cursor/rules/` to verify compliance:
+
 ## When to Run
 
 **Run this skill proactively** before using the `create-pull-request` skill. This ensures all requirements are met before PR creation.
@@ -18,11 +24,15 @@ Copy and track progress:
 ```
 PR Validation:
 - [ ] 1. Code rules compliance
-- [ ] 2. context.md updated (if feature/architecture change)
-- [ ] 3. Testing plan exists
-- [ ] 4. Migrations use db-migration skill (if applicable)
-- [ ] 5. Analytics considered (if schema/feature change)
-- [ ] 6. Ready for create-pull-request skill
+- [ ] 2. Implementation plan saved (docs/plans/)
+- [ ] 3. Research doc exists (if new user-facing feature)
+- [ ] 4. Feature architecture doc exists (if new feature)
+- [ ] 5. context.md updated (if feature/architecture change)
+- [ ] 6. high-level-architecture.md updated (if new routes/features/schema)
+- [ ] 7. Testing plan exists
+- [ ] 8. Migrations use db-migration skill (if applicable)
+- [ ] 9. Analytics considered (if schema/feature change)
+- [ ] 10. Ready for create-pull-request skill
 ```
 
 ---
@@ -89,7 +99,65 @@ For each changed file, verify it follows the appropriate rule based on file loca
 
 ---
 
-## Step 3: Check context.md Updates
+## Step 3: Check Implementation Plan Saved
+
+**Required when:** Implementing new features from a plan.
+
+### Verify Plan Doc Exists
+
+```bash
+# Check if implementation plan was saved
+ls -la docs/plans/*-implementation.md 2>/dev/null
+```
+
+**The implementation plan should be saved from the Cursor plan file to `docs/plans/{feature}-implementation.md` and include:**
+- Overview of the feature
+- Implementation tasks with status
+- Architecture diagrams
+- Key files created/modified
+- Links to related docs (research, architecture, testing)
+
+### When NOT Required
+
+- Bug fixes without a formal plan
+- Minor changes
+- Documentation-only updates
+
+---
+
+## Step 4: Check Research Documentation
+
+**Required when:** Adding new user-facing features that involve UX decisions.
+
+### Verify Research Doc Exists
+
+```bash
+# Check if research doc was created
+ls -la docs/research/*-research.md 2>/dev/null
+```
+
+**For new user-facing features, `docs/research/{feature}-research.md` should include:**
+- Executive summary of findings
+- Competitive landscape analysis
+- Common UX patterns observed
+- Differentiation opportunities
+- Recommendations
+
+### When NOT Required
+
+- Backend-only features
+- Bug fixes
+- Refactoring
+- Minor UI tweaks without UX decisions
+- Features where patterns are already established
+
+### If Missing
+
+**Prompt user:** "Research doc not found for this user-facing feature. Consider using Tavily MCP to research competitors and UX patterns, then document in `docs/research/{feature}-research.md`."
+
+---
+
+## Step 5: Check context.md Updates
 
 **Required when:** Adding features, changing architecture, modifying API routes, or updating database schema.
 
@@ -126,7 +194,84 @@ Add to the `## Recent Changes` section:
 
 ---
 
-## Step 4: Verify Testing Exists
+## Step 5.5: Check high-level-architecture.md Updates
+
+**Required when:** Adding new routes, implementing new features, or making database schema changes.
+
+### Verify high-level-architecture.md
+
+```bash
+# Check if high-level-architecture.md was modified
+git diff main...HEAD --name-only | grep -q "high-level-architecture.md"
+
+# Check if new routes were added
+git diff main...HEAD -- app/routes.ts
+```
+
+**If routes/features/schema changed but high-level-architecture.md is unchanged:**
+
+1. Check what needs updating:
+   - New routes → Update Route Map diagram + Information Architecture table
+   - New features → Add Feature Flow section with Mermaid diagram
+   - Schema changes → Update Data Relationships ER diagram
+
+2. **Prompt user:** "high-level-architecture.md needs updating. Run the `architecture-tracker` subagent to update route maps, feature flows, and add a changelog entry."
+
+### What Should Be Updated
+
+| Change Type | Sections to Update |
+|-------------|-------------------|
+| New routes | Route Map, Information Architecture table, Changelog |
+| New features | Route Map, Feature Flows, possibly Data Relationships, Changelog |
+| Schema changes | Data Relationships ER diagram, Changelog |
+| Architectural decisions | System Architecture, Changelog |
+
+### Changelog Entry Format
+
+```markdown
+### YYYY-MM-DD - Feature/Change Name
+- Added: New route at `/path`
+- Added: New table `table_name`
+- Changed: Modified flow for X
+```
+
+---
+
+## Step 6: Check Feature Architecture Doc
+
+**Required when:** Adding new features with multiple files/layers.
+
+### Verify Feature Architecture Doc Exists
+
+```bash
+# Check if feature architecture doc was created
+ls -la docs/features/*-architecture.md 2>/dev/null
+```
+
+**For new features, `docs/features/{feature}-architecture.md` should include:**
+- Overview and vision
+- User flow diagrams (mermaid)
+- System architecture diagram
+- Data model (ER diagram + TypeScript interfaces)
+- Feature breakdown with specifications
+- UI component hierarchy
+- Frontend design specification
+- API endpoints table
+
+### When NOT Required
+
+- Bug fixes
+- Refactoring without new features
+- Minor UI changes
+- Documentation-only updates
+
+### If Missing
+
+**Prompt user:** "Feature architecture doc not found. Create `docs/features/{feature}-architecture.md` with user flows, data model, and component hierarchy."
+
+---
+
+## Step 7: Verify Testing Exists
 
 Check for testing artifacts:
 
@@ -134,11 +279,9 @@ Check for testing artifacts:
 # Check for e2e test files
 ls -la e2e/*.spec.ts 2>/dev/null
 
-# Check for test documentation
-ls -la docs/features/*-testing.md 2>/dev/null
-
-# Check for testing plan files
-ls -la .cursor/testing-plans/*.md 2>/dev/null
+# Check for testing plans with screenshots
+ls -la docs/testing/*/*.md 2>/dev/null
+ls -la docs/testing/*/screenshots/ 2>/dev/null
 ```
 
 ### Required Testing Artifacts
@@ -150,24 +293,26 @@ For feature PRs, the following should exist:
    - Tests for edge cases
    - Tests for error states
 
-2. **Test Documentation**: `docs/features/{feature}-testing.md`
-   - Test results summary
-   - E2E test coverage list
-   - Key test IDs used
+2. **Testing Plan**: `docs/testing/{feature}/{feature}.md`
+   - Test scenarios with descriptions
+   - UI elements checklist
+   - Test IDs reference table
+   - Screenshots in `docs/testing/{feature}/screenshots/`
 
 3. **Data-testid Attributes**: Key elements should have `data-testid` for reliable testing
 
 ### If No Testing Found
 
 **Prompt user:** "No e2e tests found. Before creating the PR, run the `tester` subagent to:
-1. Verify the implementation with Playwright MCP
-2. Write e2e tests in `e2e/`
-3. Create test documentation in `docs/features/`
-4. Add data-testid attributes to key elements"
+1. Create testing plan at `docs/testing/{feature}/{feature}.md`
+2. Verify the implementation with Playwright MCP
+3. Save screenshots to `docs/testing/{feature}/screenshots/`
+4. Write e2e tests in `e2e/`
+5. Add data-testid attributes to key elements"
 
 ---
 
-## Step 5: Check Migration Compliance
+## Step 8: Check Migration Compliance
 
 **Only if `drizzle/` files were changed or `app/db/schema.ts` was modified.**
 
@@ -189,7 +334,7 @@ ls -la drizzle/*.sql | tail -5
 
 ---
 
-## Step 6: Check Analytics Considerations
+## Step 9: Check Analytics Considerations
 
 **Required when:** Adding database schema changes, new features with user data, or modifying existing data models.
 
@@ -230,7 +375,7 @@ git diff main...HEAD --name-only | grep -E "(analytics|dashboard)"
 
 ---
 
-## Step 7: Final Validation Report
+## Step 10: Final Validation Report
 
 Generate a summary:
 
@@ -243,8 +388,12 @@ Generate a summary:
 - [✅/❌] Route conventions
 
 ### Documentation
+- [✅/❌] Implementation plan saved (`docs/plans/{feature}-implementation.md`)
+- [✅/❌/N/A] Research doc (`docs/research/{feature}-research.md`) - for user-facing features
+- [✅/❌] Feature architecture doc (`docs/features/{feature}-architecture.md`)
 - [✅/❌] context.md updated
-- [✅/❌] Test documentation exists (`docs/features/*-testing.md`)
+- [✅/❌] high-level-architecture.md updated (routes, flows, changelog)
+- [✅/❌] Testing plan exists (`docs/testing/{feature}/{feature}.md`)
 
 ### Testing
 - [✅/❌] E2E tests exist (`e2e/*.spec.ts`)
@@ -270,18 +419,24 @@ Generate a summary:
 
 If checks fail, address the issues first:
 1. Fix code rule violations
-2. Update context.md
-3. Generate testing plan with tester subagent
-4. Generate migrations with db-migration skill
-5. Create analytics dashboards with data-analytics subagent
+2. Save implementation plan to `docs/plans/{feature}-implementation.md`
+3. Create research doc at `docs/research/{feature}-research.md` (use Tavily MCP)
+4. Create feature architecture doc at `docs/features/{feature}-architecture.md`
+5. Update context.md via context-keeper subagent
+6. Update high-level-architecture.md via architecture-tracker subagent
+7. Generate testing plan with tester subagent
+8. Generate migrations with db-migration skill
+9. Create analytics dashboards with data-analytics subagent
 
 ---
 
 ## Quick Reference: Skills to Use
 
-| Task | Skill |
-|------|-------|
-| Generate migration | `db-migration` |
-| Create pull request | `create-pull-request` |
+| Task | Skill/Subagent |
+|------|----------------|
+| Generate migration | `db-migration` skill |
+| Create pull request | `create-pull-request` skill |
+| Update context docs | `context-keeper` subagent |
+| Update architecture docs | `architecture-tracker` subagent |
 | Generate testing plan | `tester` subagent |
 | Create analytics dashboards | `data-analytics` subagent |

@@ -4,8 +4,29 @@ alwaysApply: false
 ---
 # Tailwind CSS & Color Variables Rules
 
-## Core Principle
-**ALWAYS prefer CSS variables over hardcoded colors.** This ensures consistency, maintainability, and proper dark mode support.
+## Core Principles
+
+1. **ALWAYS prefer CSS variables over hardcoded colors.** This ensures consistency, maintainability, and proper dark mode support.
+
+2. **ALWAYS use `cn()` for conditional or dynamic class names.** Import from `@/lib/utils`:
+
+```tsx
+import { cn } from "@/lib/utils";
+
+// ✅ CORRECT - Using cn() for conditional classes
+<div className={cn("p-4", isActive && "bg-primary", className)}>
+
+// ✅ CORRECT - Using cn() to merge with passed className prop
+<Button className={cn("mt-4", className)} />
+
+// ❌ WRONG - Using template literals
+<div className={`p-4 ${isActive ? "bg-primary" : ""}`}>
+
+// ❌ WRONG - Manual string concatenation
+<div className={"p-4 " + (isActive ? "bg-primary" : "")}>
+```
+
+The `cn()` utility combines `clsx` for conditional logic and `tailwind-merge` to properly resolve conflicting Tailwind classes.
 
 ## Available CSS Variables
 
@@ -106,6 +127,19 @@ For data visualization:
    ```
 
 ## Forbidden Patterns
+
+### ❌ Never Use Template Literals for Class Names
+```tsx
+// BAD - Template literals don't merge conflicting classes properly
+<div className={`p-4 ${isActive ? "bg-primary" : ""} ${className}`}>
+
+// BAD - Ternary in template literal
+<button className={`btn ${variant === "primary" ? "bg-primary" : "bg-secondary"}`}>
+
+// GOOD - Use cn() for all conditional/dynamic classes
+<div className={cn("p-4", isActive && "bg-primary", className)}>
+<button className={cn("btn", variant === "primary" ? "bg-primary" : "bg-secondary")}>
+```
 
 ### ❌ Never Use Hardcoded Colors in Classes
 ```tsx

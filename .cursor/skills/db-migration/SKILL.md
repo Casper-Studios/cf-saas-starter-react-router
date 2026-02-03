@@ -7,6 +7,15 @@ description: Generate Drizzle database migrations with descriptive names. Use wh
 
 Generate Drizzle ORM migrations for schema changes.
 
+## Rules Reference
+
+**IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning.**
+
+Before modifying schema, read `.cursor/rules/database.mdc` for:
+- Drizzle ORM patterns (timestamps, booleans, enums, JSON fields)
+- Foreign key conventions
+- Naming conventions (snake_case in SQL, camelCase in TypeScript)
+
 ## Before Generating
 
 1. **Verify schema changes exist** in `app/db/schema.ts`

@@ -7,6 +7,19 @@ description: Create a GitHub pull request with a properly formatted description.
 
 Create GitHub PRs with descriptions following the team's template structure.
 
+## Before Creating PR
+
+**IMPORTANT: Run the `pr-checker` skill first** to validate changes follow project rules.
+
+Read `.cursor/context.md` for the compressed Rules Index. Ensure all touched files comply with their respective rules before creating the PR.
+
+### Pre-PR Documentation Checklist
+
+For feature PRs, ensure these are updated:
+- [ ] `context.md` updated (via `context-keeper` subagent)
+- [ ] `high-level-architecture.md` updated (via `architecture-tracker` subagent) - if new routes, features, or schema changes
+- [ ] Testing plan exists with screenshots
+
 ## Workflow
 
 ### Step 1: Gather Context
@@ -44,13 +57,47 @@ Pattern: Look for `LAN-` followed by numbers.
 Look for any generated testing plans in these locations:
 
 - `e2e/*.spec.ts` - E2E test files
-- `docs/features/*-testing.md` - Test documentation
-- `.cursor/testing-results/` directory
+- `docs/testing/{feature}/{feature}.md` - Testing plans with screenshots
+- `docs/testing/{feature}/screenshots/` - Playwright screenshots
 - Recent conversation context mentioning test scenarios
 
 If a testing plan exists, include its test cases in the PR description.
 
-### Step 3.5: Create Release Documentation (for `feat` PRs)
+### Step 3.5: Gather Screenshots for PR
+
+**ALWAYS include screenshots** when UI changes are part of the PR. Search for available screenshots:
+
+```bash
+# Check testing screenshots
+ls docs/testing/*/screenshots/*.png 2>/dev/null
+
+# Check concept/design images
+ls public/docs/features/*/*.png 2>/dev/null
+
+# Check any other image assets added in this branch
+git diff main...HEAD --name-only | grep -E '\.(png|jpg|jpeg|gif|webp)$'
+```
+
+**Screenshot URL Format:**
+Use GitHub raw URLs so images render in the PR description:
+```
+https://github.com/{owner}/{repo}/blob/{branch}/path/to/image.png?raw=true
+```
+
+**Prioritize these screenshot types:**
+1. **Testing screenshots** - Actual UI from `docs/testing/{feature}/screenshots/`
+2. **Concept images** - Design concepts from `public/docs/features/{feature}/`
+3. **Before/After comparisons** - When refactoring UI
+
+**Screenshot categories to include:**
+- Empty states
+- Filled/populated states
+- Form validation errors
+- Success states
+- New UI components
+- Navigation changes
+
+### Step 3.6: Create Release Documentation (for `feat` PRs)
 
 For feature PRs, create a release document in `docs/releases/`:
 
@@ -163,6 +210,21 @@ Single word from the type list above.
 - List specific breaking changes with migration steps
 - Or state "None" explicitly
 
+### Screenshots
+Include screenshots when UI changes are present. Use GitHub raw URLs:
+
+```markdown
+## Screenshots
+
+### Feature Name
+![Description](https://github.com/{owner}/{repo}/blob/{branch}/path/to/screenshot.png?raw=true)
+
+### Another Feature
+![Description](https://github.com/{owner}/{repo}/blob/{branch}/path/to/another.png?raw=true)
+```
+
+Group screenshots by feature area with descriptive headers. If no UI changes, omit this section entirely (don't write "None").
+
 ### Test Cases
 Create actionable checkbox items:
 ```markdown
@@ -193,6 +255,17 @@ Add user preferences page allowing users to customize notification settings and 
 
 ## Breaking Changes
 None
+
+## Screenshots
+
+### Preferences Page (Empty State)
+![Empty preferences](https://github.com/acme/app/blob/feat/preferences/docs/testing/preferences/screenshots/preferences-empty.png?raw=true)
+
+### Preferences Page (Filled)
+![Filled preferences](https://github.com/acme/app/blob/feat/preferences/docs/testing/preferences/screenshots/preferences-filled.png?raw=true)
+
+### Dark Mode Toggle
+![Dark mode](https://github.com/acme/app/blob/feat/preferences/docs/testing/preferences/screenshots/dark-mode.png?raw=true)
 
 ## Test Cases
 - [ ] Navigate to /settings/preferences and verify page loads
@@ -234,4 +307,6 @@ None
 - **Keep Purpose scannable** - reviewers should understand the change in seconds
 - **Be specific in Test Cases** - vague tests get skipped
 - **Don't leave Breaking Changes blank** - always state "None" or list them
-- **Include screenshots for UI changes** in the Notes section
+- **ALWAYS include screenshots for UI changes** - check `docs/testing/*/screenshots/` and `public/docs/features/*/`
+- **Use descriptive screenshot headers** - group by feature area (e.g., "### Form Validation", "### Empty State")
+- **Prefer actual screenshots over concepts** - testing screenshots show real implementation
