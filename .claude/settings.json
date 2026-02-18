@@ -11,6 +11,8 @@
     "github@claude-plugins-official": true,
     "auth-skills@better-auth-agent-skills": true,
     "superpowers@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true
+    "claude-md-management@claude-plugins-official": true,
+    "cf-saas-stack@SeanningTatum/claude-plugins": true,
+    "dev-workflows@SeanningTatum/claude-plugins": true
   }
 }
