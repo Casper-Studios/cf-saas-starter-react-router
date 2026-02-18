@@ -94,6 +94,23 @@ cp .cursor/mcp.template.json .cursor/mcp.json
 # Edit .cursor/mcp.json and add your API keys
 ```
 
+### Claude Code Setup (Optional)
+
+This project uses [Claude Code plugins](https://github.com/SeanningTatum/claude-plugins) for AI-assisted development with project-specific rules, commands, and agents.
+
+**Install the plugins:**
+```bash
+# Add the marketplace
+/plugins marketplace add SeanningTatum/claude-plugins
+
+# Install plugins
+/plugins install cf-saas-stack
+/plugins install dev-workflows
+```
+
+- **cf-saas-stack** — Project rules (auth, database, i18n, routes, error handling, etc.) and commands (feature implementation, DB migrations, PR creation, etc.)
+- **dev-workflows** — Development workflow agents (testing, logging, architecture tracking, design validation, etc.)
+
 ---
 
 ## UI/UX Team Guide: Kitchen Sink

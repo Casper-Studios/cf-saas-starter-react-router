@@ -18,6 +18,15 @@ bun run test:e2e:ui      # Playwright tests with UI
 bunx playwright test path/to/test.spec.ts  # Run a single test file
 ```
 
+## Plugins
+
+This project uses Claude Code plugins for coding conventions and dev workflows. They are configured in `.claude/settings.json`:
+
+- **cf-saas-stack** — Cloudflare Workers + React Router + tRPC + D1/Drizzle + Better Auth conventions (auth, database, repository pattern, routes, errors, etc.)
+- **dev-workflows** — Universal dev workflows (frontend tasks, Tailwind, pull requests, AI prompts)
+
+Claude automatically loads the relevant conventions as skills when working on matching code.
+
 ## Context Docs
 
 Detailed context docs (architecture, data models, API, security, features, integrations, user journeys) are in `.cursor/context/`.
