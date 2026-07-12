@@ -1,0 +1,10 @@
+# Template for `.dev.vars` — local secrets consumed by the Wrangler/Vite dev
+# runtime (Cloudflare Workers env vars for local dev, NOT `.env`/Vite client
+# vars). `.dev.vars*` is gitignored except this example file.
+#
+# Copy this file to `.dev.vars` and fill in real values before running
+# `bun run dev`:
+#
+#   cp .dev.vars.example .dev.vars
+
+BETTER_AUTH_SECRET=change-me-openssl-rand-hex-16

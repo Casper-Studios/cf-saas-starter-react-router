@@ -31,6 +31,7 @@ Per-feature memory. **One MD per shipped or in-progress feature** — captures p
 | Admin Dashboard | [`admin-dashboard.md`](admin-dashboard.md) | shipped | 2026-05-07 |
 | File Upload | [`file-upload.md`](file-upload.md) | shipped | 2026-05-07 |
 | Analytics | [`analytics.md`](analytics.md) | shipped | 2026-05-07 |
+| Preview Deployments | [`preview-deployments.md`](preview-deployments.md) | shipped | 2026-07-11 |
 
 ## Important things to look at
 

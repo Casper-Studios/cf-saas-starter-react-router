@@ -3,6 +3,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { intro, outro, confirm, spinner, cancel } from "@clack/prompts";
+import { DUMMY_INPUT, buildWranglerConfig, writeWranglerJsonc } from "./lib/wrangler-config";
 
 function executeCommand(
   command: string,
@@ -48,7 +49,7 @@ function extractAccountDetails(output: string): { name: string; id: string }[] {
   return accountDetails;
 }
 
-function restoreHandlebarsInPackageJson(projectName: string, dbName: string) {
+function restorePackageJsonName() {
   const packageJsonPath = path.join(__dirname, "..", "package.json");
 
   if (!fs.existsSync(packageJsonPath)) {
@@ -56,27 +57,24 @@ function restoreHandlebarsInPackageJson(projectName: string, dbName: string) {
     return;
   }
 
-  let content = fs.readFileSync(packageJsonPath, "utf-8");
-
-  // Restore "name" field: "name": "my-project" → "name": "{{projectName}}"
-  content = content.replace(
-    `"name": "${projectName}"`,
-    `"name": "{{projectName}}"`
-  );
-
-  // Restore db migration scripts: "my-project-db" → "{{dbName}}"
-  content = content.replaceAll(dbName, "{{dbName}}");
-
-  fs.writeFileSync(packageJsonPath, content);
-  console.log("\x1b[32m✓ Restored handlebars in package.json\x1b[0m");
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+  pkg.name = "cf-saas-starter-react-router";
+  fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+  console.log("\x1b[32m✓ Restored package.json name\x1b[0m");
 }
 
-interface WranglerConfig {
-  name: string;
+interface WranglerEnvConfig {
   d1_databases?: { binding: string; database_name: string; database_id: string }[];
   r2_buckets?: { binding: string; bucket_name: string }[];
   kv_namespaces?: { binding: string; id: string }[];
   workflows?: { binding: string; name: string; class_name: string }[];
+}
+
+interface WranglerConfig extends WranglerEnvConfig {
+  name: string;
+  env?: {
+    preview?: WranglerEnvConfig;
+  };
 }
 
 function readWranglerConfig(): WranglerConfig | null {
@@ -98,6 +96,38 @@ function readWranglerConfig(): WranglerConfig | null {
   }
 }
 
+/**
+ * Lists orphaned per-PR preview databases (`<project>-db-pr-<N>`, created by
+ * CI via scripts/ci/setup-preview-db.ts). Returns null if the list fails
+ * (e.g. not authenticated yet) — callers should warn + skip in that case.
+ */
+function listPerPrDatabases(
+  projectName: string,
+  env?: Record<string, string>
+): string[] | null {
+  const result = executeCommand("bunx wrangler d1 list --json", true, env);
+  if (!result || typeof result !== "string") {
+    return null;
+  }
+
+  // Tolerate any leading non-JSON output from wrangler.
+  const jsonStart = result.indexOf("[");
+  if (jsonStart === -1) {
+    return null;
+  }
+
+  try {
+    const dbs = JSON.parse(result.slice(jsonStart)) as {
+      name: string;
+      uuid: string;
+    }[];
+    const prefix = `${projectName}-db-pr-`;
+    return dbs.map((db) => db.name).filter((name) => name.startsWith(prefix));
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   intro("🗑️  Cloudflare SaaS Stack - Teardown");
 
@@ -113,12 +143,39 @@ async function main() {
   }
 
   const projectName = config.name;
-  const databases = config.d1_databases ?? [];
-  const buckets = config.r2_buckets ?? [];
-  const kvNamespaces = config.kv_namespaces ?? [];
+  const previewWorkerName = `${projectName}-preview`;
+
+  // Collect top-level + preview-env resources, deduped by name/id.
+  const databases = [
+    ...(config.d1_databases ?? []),
+    ...(config.env?.preview?.d1_databases ?? []),
+  ].filter(
+    (db, index, arr) =>
+      arr.findIndex((d) => d.database_name === db.database_name) === index
+  );
+
+  const buckets = [
+    ...(config.r2_buckets ?? []),
+    ...(config.env?.preview?.r2_buckets ?? []),
+  ].filter(
+    (bucket, index, arr) =>
+      arr.findIndex((b) => b.bucket_name === bucket.bucket_name) === index
+  );
+
+  const kvNamespaces = [
+    ...(config.kv_namespaces ?? []),
+    ...(config.env?.preview?.kv_namespaces ?? []),
+  ].filter(
+    (kv, index, arr) => arr.findIndex((k) => k.id === kv.id) === index
+  );
+
+  // Sweep for orphaned per-PR preview databases BEFORE the confirm prompt,
+  // so the summary below is accurate.
+  const perPrDatabases = listPerPrDatabases(projectName);
 
   console.log("\n\x1b[31mThe following resources will be DELETED:\x1b[0m\n");
   console.log(`  • Worker:   ${projectName}`);
+  console.log(`  • Worker:   ${previewWorkerName}`);
   for (const db of databases) {
     console.log(`  • D1 DB:    ${db.database_name} (${db.database_id})`);
   }
@@ -127,6 +184,18 @@ async function main() {
   }
   for (const kv of kvNamespaces) {
     console.log(`  • KV:       ${kv.id}`);
+  }
+  if (perPrDatabases === null) {
+    console.log(
+      `  \x1b[33m⚠ Could not list per-PR preview databases (wrangler d1 list failed) — sweep will be skipped\x1b[0m`
+    );
+  } else {
+    console.log(
+      `  • plus any per-PR preview databases (${perPrDatabases.length} found)`
+    );
+    for (const name of perPrDatabases) {
+      console.log(`      - ${name}`);
+    }
   }
 
   const shouldContinue = await confirm({
@@ -180,19 +249,21 @@ async function main() {
 
   const env = accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined;
 
-  // Step 1: Delete the Worker
-  console.log("\n\x1b[36m🗑️  Step 1: Deleting Worker\x1b[0m");
-  const workerSpinner = spinner();
-  workerSpinner.start(`Deleting worker: ${projectName}...`);
-  const workerResult = executeCommand(
-    `wrangler delete --name ${projectName} --force`,
-    true,
-    env
-  );
-  if (workerResult && typeof workerResult === "object" && workerResult.error) {
-    workerSpinner.stop(`\x1b[33m⚠ Worker deletion failed (may not exist)\x1b[0m`);
-  } else {
-    workerSpinner.stop(`\x1b[32m✓ Worker deleted\x1b[0m`);
+  // Step 1: Delete the Workers (production + preview)
+  console.log("\n\x1b[36m🗑️  Step 1: Deleting Workers\x1b[0m");
+  for (const workerName of [projectName, previewWorkerName]) {
+    const workerSpinner = spinner();
+    workerSpinner.start(`Deleting worker: ${workerName}...`);
+    const workerResult = executeCommand(
+      `wrangler delete --name ${workerName} --force`,
+      true,
+      env
+    );
+    if (workerResult && typeof workerResult === "object" && workerResult.error) {
+      workerSpinner.stop(`\x1b[33m⚠ Worker deletion failed (may not exist): ${workerName}\x1b[0m`);
+    } else {
+      workerSpinner.stop(`\x1b[32m✓ Worker deleted: ${workerName}\x1b[0m`);
+    }
   }
 
   // Step 2: Delete D1 databases
@@ -221,6 +292,29 @@ async function main() {
       }
     } else {
       dbSpinner.stop(`\x1b[32m✓ Database deleted: ${db.database_name}\x1b[0m`);
+    }
+  }
+
+  // Orphan sweep: per-PR preview databases created by CI
+  // (scripts/ci/setup-preview-db.ts) that never appear in wrangler.jsonc.
+  if (perPrDatabases === null) {
+    console.log(
+      "\x1b[33m⚠ Skipping per-PR preview database sweep (wrangler d1 list failed)\x1b[0m"
+    );
+  } else {
+    const alreadyDeleted = new Set(databases.map((db) => db.database_name));
+    for (const name of perPrDatabases) {
+      if (alreadyDeleted.has(name)) continue;
+      const prDbSpinner = spinner();
+      prDbSpinner.start(`Deleting per-PR database: ${name}...`);
+      const prDbResult = executeCommand(`wrangler d1 delete ${name} -y`, true, env);
+      if (prDbResult && typeof prDbResult === "object" && prDbResult.error) {
+        prDbSpinner.stop(
+          `\x1b[33m⚠ Failed to delete per-PR database: ${name}\x1b[0m`
+        );
+      } else {
+        prDbSpinner.stop(`\x1b[32m✓ Per-PR database deleted: ${name}\x1b[0m`);
+      }
     }
   }
 
@@ -262,45 +356,28 @@ async function main() {
     }
   }
 
-  // Step 5: Restore package.json handlebars
+  // Step 5: Restore package.json
   console.log("\n\x1b[36m🔄 Step 5: Restoring package.json\x1b[0m");
-  const dbName = databases[0]?.database_name;
-  if (dbName) {
-    restoreHandlebarsInPackageJson(projectName, dbName);
-  } else {
-    console.log("\x1b[33m⚠ No database found in config, skipping package.json restore\x1b[0m");
-  }
+  restorePackageJsonName();
 
   // Step 6: Clean up local files
   console.log("\n\x1b[36m🧹 Step 6: Cleaning Up Local Files\x1b[0m");
 
-  const cleanupLocal = await confirm({
-    message: "Delete local configuration files? (wrangler.jsonc, .env)",
+  // Restore wrangler.jsonc to the committed dummy version
+  writeWranglerJsonc(buildWranglerConfig(DUMMY_INPUT));
+  console.log("\x1b[32m✓ Restored wrangler.jsonc to dummy values\x1b[0m");
+
+  const cleanupEnv = await confirm({
+    message: "Delete local .env file?",
     initialValue: false,
   });
 
-  if (cleanupLocal) {
-    const wranglerPath = path.join(__dirname, "..", "wrangler.jsonc");
+  if (cleanupEnv) {
     const envPath = path.join(__dirname, "..", ".env");
-
-    if (fs.existsSync(wranglerPath)) {
-      fs.unlinkSync(wranglerPath);
-      console.log("\x1b[32m✓ Deleted wrangler.jsonc\x1b[0m");
-    }
 
     if (fs.existsSync(envPath)) {
       fs.unlinkSync(envPath);
       console.log("\x1b[32m✓ Deleted .env\x1b[0m");
-    }
-
-    // Re-add wrangler.jsonc to .gitignore
-    const gitignorePath = path.join(__dirname, "..", ".gitignore");
-    if (fs.existsSync(gitignorePath)) {
-      const content = fs.readFileSync(gitignorePath, "utf-8");
-      if (!content.includes("wrangler.jsonc")) {
-        fs.writeFileSync(gitignorePath, content.trimEnd() + "\nwrangler.jsonc\n");
-        console.log("\x1b[32m✓ Re-added wrangler.jsonc to .gitignore\x1b[0m");
-      }
     }
   }
 

@@ -4,7 +4,7 @@ The integrations actually wired into this repo. **Stripe / PostHog / Resend / ex
 
 ## Cloudflare Services
 
-Bindings declared in [`wrangler.jsonc`](../../wrangler.jsonc) and typed in `worker-configuration.d.ts`:
+Bindings declared in [`wrangler.jsonc`](../../wrangler.jsonc) and typed in `worker-configuration.d.ts`. The config is committed with dummy IDs (so `cf-typegen`/CI work on fresh clones); `bun run setup` fills real IDs and provisions both production resources and the `env.preview` environment (`<name>-preview` worker + `-preview` D1/R2 for per-PR preview deployments — see [`../rules/cloudflare.md`](../rules/cloudflare.md) "Environments & preview deployments"):
 
 | Binding | Type | Purpose |
 |---------|------|---------|

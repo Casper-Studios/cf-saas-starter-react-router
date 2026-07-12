@@ -1,0 +1,93 @@
+# Per-PR preview deployments.
+#
+# This workflow is OPT-IN. The boilerplate ships with placeholder wrangler
+# IDs and no Cloudflare credentials, so previews stay off until you wire up
+# your own account:
+#
+#   1. Set the repo VARIABLE `CLOUDFLARE_ACCOUNT_ID`
+#      (Settings → Secrets and variables → Actions → Variables tab) to your
+#      Cloudflare account ID.
+#   2. Set the repo SECRET `CLOUDFLARE_API_TOKEN`
+#      (same page → Secrets tab) to an API token created from the
+#      "Edit Cloudflare Workers" template, with "D1:Edit" permission added
+#      (the template alone can't run D1 migrations).
+#
+# Once both are set, every PR gets its own Worker version at a stable URL
+# posted as a PR comment, backed by its own D1 database (provisioned here,
+# deleted on close by preview-cleanup.yml). `bun run setup` provisions the
+# rest of the `preview` environment (R2 + Worker) — see wrangler.jsonc's
+# `env.preview` block.
+name: Preview Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    name: Deploy preview
+    runs-on: ubuntu-latest
+    if: ${{ vars.CLOUDFLARE_ACCOUNT_ID != '' }}
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Provision per-PR D1
+        run: bun scripts/ci/setup-preview-db.ts ${{ github.event.number }}
+
+      - name: Migrate per-PR D1
+        run: bunx wrangler d1 migrations apply DATABASE --env preview --remote
+
+      - name: Build (preview env)
+        env:
+          CLOUDFLARE_ENV: preview
+        run: bun run build
+
+      - name: Upload preview version
+        id: upload
+        run: |
+          OUT=$(bunx wrangler versions upload --preview-alias "pr-${{ github.event.number }}" 2>&1)
+          echo "$OUT"
+          {
+            echo "alias_url=$(printf '%s' "$OUT" | grep -oE 'Version Preview Alias URL: https://\S+' | awk '{print $NF}')"
+            echo "version_url=$(printf '%s' "$OUT" | grep -oE 'Version Preview URL: https://\S+' | awk '{print $NF}')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: |
+            ### Preview deployment
+
+            **${{ steps.upload.outputs.alias_url }}**
+
+            Per-commit version: ${{ steps.upload.outputs.version_url }}
+            Commit: `${{ github.sha }}`
+
+            Data: this PR gets its **own D1 database** (created when the PR
+            opens, deleted when it closes). The preview R2 bucket is shared
+            across all PR previews.
+
+            No manual teardown needed — uploaded versions age out on their
+            own, and the per-PR database is deleted on close by
+            `preview-cleanup.yml`.

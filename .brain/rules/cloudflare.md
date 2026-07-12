@@ -132,6 +132,24 @@ yield* wf.triggerExample(input).pipe(
 );
 ```
 
+## Environments & preview deployments
+
+Two wrangler environments live in `wrangler.jsonc`:
+
+| Env | Worker | D1 | R2 | Deploy command |
+|-----|--------|----|----|----------------|
+| top-level (prod) | `<name>` | `<name>-db` | `<name>-bucket` | `bun run deploy` |
+| `preview` | `<name>-preview` | `<name>-db-preview` (manual) / `<name>-db-pr-<N>` (per-PR, patched in CI) | `<name>-bucket-preview` (shared) | `bun run deploy:preview` |
+
+Rules:
+
+- **Env bindings are NOT inherited.** Every binding (D1, R2, AI, workflows, observability) must be redeclared inside `env.preview`. A missing redeclaration silently drops the binding.
+- **`wrangler deploy --env preview` DOES NOT WORK with the Vite plugin** — it silently deploys prod. `@cloudflare/vite-plugin` writes a flattened redirected config (`build/server/wrangler.json`) with no `env` block; the environment must be selected at **build time**: `CLOUDFLARE_ENV=preview bun run build`, then plain `wrangler deploy` follows the redirect.
+- **Secrets are per-environment**: `wrangler secret put BETTER_AUTH_SECRET --env preview` — an unset secret fails at runtime (error 1101), not deploy time.
+- Per-PR previews: `.github/workflows/preview.yml` runs `scripts/ci/setup-preview-db.ts <N>` — creates a **per-PR D1** (`<name>-db-pr-<N>`) and patches the CI checkout's `wrangler.jsonc` to point `env.preview`'s `DATABASE` binding at it (patch never committed) — then migrates it, builds with `CLOUDFLARE_ENV=preview`, runs `wrangler versions upload --preview-alias pr-<N>` → stable URL `https://pr-<N>-<name>-preview.<subdomain>.workers.dev`. Bindings are per-version, so one preview worker serves all PRs. R2 stays **shared** across previews (wrangler can't delete non-empty buckets). Opt-in via GitHub repo variable `CLOUDFLARE_ACCOUNT_ID` + secret `CLOUDFLARE_API_TOKEN`. Cleanup: `preview-cleanup.yml` deletes the per-PR D1 on PR close; worker versions age out on their own (aliases capped at 1000 most recent); `bun run teardown` sweeps orphaned `-db-pr-*` DBs. D1 free plan caps at 10 databases — per-PR DBs assume paid; on free, revert the provision step to the shared `-db-preview`.
+- Preview URLs work with the Workflows binding (verified 2026-07-10); the documented Durable-Object preview-URL restriction is not triggered by `workflows` config.
+- `wrangler.jsonc` is **committed with dummy IDs** so `cf-typegen`/CI work on a fresh clone; `bun run setup` fills real IDs (and creates preview resources); `bun run teardown` restores the dummy file.
+
 ## Wrangler commands
 
 ```bash
