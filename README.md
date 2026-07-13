@@ -70,6 +70,7 @@ The wizard creates your D1 database, R2 bucket, optional KV namespace, generates
 ```bash
 bun install                 # also runs cf-typegen + git hooks install
 bun run db:migrate:local    # apply migrations to local D1
+bun run db:seed             # seed local D1 with admin/user/banned fixtures
 bun run dev                 # http://localhost:5173
 ```
 
@@ -314,6 +315,8 @@ bun run test:e2e:report       # Open last Playwright report
 bun run db:generate           # Generate Drizzle migration from schema
 bun run db:migrate:local      # Apply migrations to local D1
 bun run db:migrate:remote     # Apply migrations to remote D1
+bun run db:seed               # Seed local D1 with admin/user/banned fixtures
+bun run db:seed:preview       # Seed the preview-env D1 with the same fixtures
 bun run db:studio             # Drizzle Studio (visual DB editor)
 
 bun run cf-typegen            # Regenerate worker-configuration.d.ts
@@ -362,11 +365,15 @@ bunx wrangler d1 execute YOUR_DB_NAME --remote \
   --command "UPDATE user SET role = 'admin' WHERE email = 'user@example.com'"
 ```
 
-Or seed a test admin locally:
+Or seed the fixture accounts locally:
 
 ```bash
-bun run scripts/seed-test-admin.ts
+bun run db:seed
 ```
+
+Gives you `admin@preview.local` / `Password123!` (plus `user@preview.local`
+and `banned@preview.local`). See [Database](#database) below and
+[`.brain/rules/repository.md`](.brain/rules/repository.md) ("Seed data").
 
 ---
 
@@ -447,7 +454,17 @@ https://pr-<N>-<worker>-preview.<subdomain>.workers.dev
 
 The Action also comments the URL (and a per-commit version URL) on the PR.
 
-**Data isolation** — each PR gets its **own D1 database** (`<name>-db-pr-<N>`). On PR open (and every push), [`scripts/ci/setup-preview-db.ts`](scripts/ci/setup-preview-db.ts) creates the database if needed and patches the CI checkout's `wrangler.jsonc` to point the preview `DATABASE` binding at it (the patch is never committed); CI then applies migrations before uploading the version. On PR close, [`.github/workflows/preview-cleanup.yml`](.github/workflows/preview-cleanup.yml) deletes that database. The preview **R2 bucket is shared** across all PR previews — not per-PR, because wrangler can't delete non-empty buckets, so per-PR buckets would accumulate as orphans. `bun run teardown` also sweeps up any leftover `-db-pr-*` databases.
+**Data isolation** — each PR gets its **own D1 database** (`<name>-db-pr-<N>`). On PR open (and every push), [`scripts/ci/setup-preview-db.ts`](scripts/ci/setup-preview-db.ts) creates the database if needed and patches the CI checkout's `wrangler.jsonc` to point the preview `DATABASE` binding at it (the patch is never committed); CI then applies migrations **and seeds fixtures** ([`scripts/seed-preview.ts`](scripts/seed-preview.ts) `--preview`) before uploading the version, so every preview URL has representative, logged-in-ready data from the first push. On PR close, [`.github/workflows/preview-cleanup.yml`](.github/workflows/preview-cleanup.yml) deletes that database. The preview **R2 bucket is shared** across all PR previews — not per-PR, because wrangler can't delete non-empty buckets, so per-PR buckets would accumulate as orphans. `bun run teardown` also sweeps up any leftover `-db-pr-*` databases.
+
+**Test accounts** — every preview and local D1 gets the same three fixtures (`bun run db:seed` / `bun run db:seed:preview`, password `Password123!` for all):
+
+| Email | Role | Notes |
+|-------|------|-------|
+| `admin@preview.local` | admin | admin dashboard access |
+| `user@preview.local` | user | regular account |
+| `banned@preview.local` | user | `banned = true`, for testing the ban UI |
+
+Seeding is idempotent (`INSERT OR IGNORE` on fixed `seed-*` ids) — safe to rerun on every PR synchronize. See [`.brain/rules/repository.md`](.brain/rules/repository.md) ("Seed data") for the rule that new tables/features must extend these fixtures.
 
 > **Free plan note:** Cloudflare's D1 free plan caps you at 10 databases, so per-PR databases assume a paid plan. On the free plan, revert the "Provision per-PR D1" step in `preview.yml` back to migrating the shared `<name>-db-preview` database (a one-line change).
 

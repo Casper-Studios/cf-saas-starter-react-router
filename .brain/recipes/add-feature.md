@@ -14,7 +14,7 @@ If you can't fill these — scope is unclear. Stop. Ask for clarity.
 
 ## 1. Persistence
 
-If new tables needed → run [add-db-table.md](add-db-table.md) first. Repository must exist before tRPC routes.
+If new tables needed → run [add-db-table.md](add-db-table.md) first. Repository must exist before tRPC routes. If the feature adds user-visible data, extend fixtures in [`scripts/seed-preview.ts`](../../scripts/seed-preview.ts) in the same diff — see [`.brain/rules/repository.md`](../rules/repository.md) ("Seed data").
 
 ## 2. External clients / bindings
 
@@ -73,6 +73,7 @@ bun run build      # catches CF Workers compat issues
 ## Definition of done
 
 - [ ] Feature memo in `.brain/features/<slug>.md` (not just stub — every section filled)
+- [ ] `scripts/seed-preview.ts` extended if the feature added a table or user-visible data
 - [ ] All five non-negotiables observed (Effect, Schema, tagged errors, tests, no Node)
 - [ ] CHANGELOG entry with date + scope
 - [ ] typecheck + unit + e2e + build all green

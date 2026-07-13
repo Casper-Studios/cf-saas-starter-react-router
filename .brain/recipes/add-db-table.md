@@ -45,13 +45,17 @@ Follow [`.brain/rules/repository.md`](../rules/repository.md). Use `Effect.Servi
 
 Use `makeTestDatabase` + `chainable` stub from [`app/services/database.test-layer.ts`](../../app/services/database.test-layer.ts). One test per method.
 
-### 6. Update brain
+### 6. Seed fixtures → [`scripts/seed-preview.ts`](../../scripts/seed-preview.ts)
+
+Extend the seed script with representative rows for the new table (`INSERT OR IGNORE`, deterministic `seed-*` ids) so per-PR previews and local dev have realistic data. See [`.brain/rules/repository.md`](../rules/repository.md) ("Seed data").
+
+### 7. Update brain
 
 - [`.brain/high-level-architecture/data-models.md`](../high-level-architecture/data-models.md) — add table row, ER diagram if relations
 - [`.brain/rules/repository.md`](../rules/repository.md) — only if introducing new pattern
 - [`.brain/CHANGELOG.md`](../CHANGELOG.md) — entry
 
-### 7. Production migration
+### 8. Production migration
 
 Only after PR merged + reviewed:
 
@@ -66,6 +70,7 @@ bun run db:migrate:remote
 - [ ] Types exported (`Post`, `NewPost`)
 - [ ] Repository in `app/repositories/`
 - [ ] Repo unit test green
+- [ ] `scripts/seed-preview.ts` extended with representative fixtures
 - [ ] `data-models.md` updated
 - [ ] CHANGELOG entry
 

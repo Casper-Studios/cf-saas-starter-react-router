@@ -57,6 +57,9 @@ jobs:
       - name: Migrate per-PR D1
         run: bunx wrangler d1 migrations apply DATABASE --env preview --remote
 
+      - name: Seed per-PR D1
+        run: bun scripts/seed-preview.ts --preview
+
       - name: Build (preview env)
         env:
           CLOUDFLARE_ENV: preview
@@ -87,6 +90,10 @@ jobs:
             Data: this PR gets its **own D1 database** (created when the PR
             opens, deleted when it closes). The preview R2 bucket is shared
             across all PR previews.
+
+            Test accounts: `admin@preview.local` / `user@preview.local` —
+            password `Password123!` (also seeded: `banned@preview.local`,
+            same password, for testing the ban UI).
 
             No manual teardown needed — uploaded versions age out on their
             own, and the per-PR database is deleted on close by

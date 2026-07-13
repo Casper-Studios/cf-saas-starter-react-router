@@ -19,6 +19,8 @@
     "db:migrate:local": "wrangler d1 migrations apply DATABASE --local",
     "db:migrate:remote": "wrangler d1 migrations apply DATABASE --remote",
     "db:migrate:preview": "wrangler d1 migrations apply DATABASE --env preview --remote",
+    "db:seed": "bun scripts/seed-preview.ts",
+    "db:seed:preview": "bun scripts/seed-preview.ts --preview",
     "setup": "bun run scripts/first-time-setup.ts",
     "teardown": "bun run scripts/teardown.ts",
     "test": "vitest run",
