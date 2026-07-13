@@ -122,6 +122,23 @@ _2026-07-11_
 - Re-uploaded pr-test alias; **live smoke PASS**: preview alias home 200, `POST /api/auth/sign-up/email` 200 with user row in preview D1 (first attempt 500 = alias propagation lag ~1 min); prod home 200 + signup 200.
 - harness-check PASS.
 
+## Step 6 — Real PR flow test (PR #7) + seed fixtures
+
+_2026-07-13_
+
+Branch `feat/preview-deployments` pushed, PR #7 opened. Two latent CI bugs surfaced and fixed:
+1. `workers/env.d.ts` (new): `wrangler types` only discovers secrets from local `.dev.vars`/`.env` — CI/fresh clones lacked `BETTER_AUTH_SECRET` on `Env` → typecheck failed. Fixed via interface merging.
+2. `vite.config.ts` `remoteBindings: !process.env.CI`: the Vite plugin defaults remoteBindings true → remote proxy session for the AI binding at dev boot → "must be logged in" in credential-less CI (killed e2e webServer).
+Also: interactive `gh secret set` without TTY stored an EMPTY secret — token env was blank in first run; set via `--body`.
+
+Seed fixtures added (user request): `scripts/seed-preview.ts` (idempotent, admin/user/banned @preview.local, Better Auth credential hashes), `db:seed`/`db:seed:preview`, CI seeds every per-PR DB, sticky comment lists credentials. Rule codified: features extend seed fixtures in the same diff (`rules/repository.md` "Seed data" + recipes + CLAUDE/AGENTS table).
+
+**Full lifecycle empirically verified on PR #7:**
+- open/push → 5/5 checks green; `…-db-pr-7` created + migrated + seeded; version uploaded; sticky comment with stable URL + credentials
+- live: `admin@preview.local` signin 200 with role admin on pr-7 alias URL
+- close → Preview Cleanup deleted `…-db-pr-7` (verified via d1 list)
+- reopen → workflow re-provisions
+
 ## Final
 
 _Closed: 2026-07-11_

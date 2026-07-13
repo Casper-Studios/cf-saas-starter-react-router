@@ -171,7 +171,44 @@ function printCredentialsTable(): void {
   console.log("");
 }
 
+/**
+ * Markdown summary of everything the seed creates — consumed by
+ * .github/workflows/preview.yml to build the PR sticky comment, so the
+ * comment always reflects the actual fixtures. Extend this alongside
+ * FIXTURES (and any future seeded tables).
+ */
+function describeMarkdown(): string {
+  const lines: string[] = [];
+  lines.push("#### Seeded test accounts");
+  lines.push("");
+  lines.push(`Password for all accounts: \`${PASSWORD}\``);
+  lines.push("");
+  lines.push("| Email | Role | State |");
+  lines.push("|-------|------|-------|");
+  for (const f of FIXTURES) {
+    const state = f.banned
+      ? `banned (${f.banReason ?? "no reason"})`
+      : f.emailVerified
+        ? "active, email verified"
+        : "active";
+    lines.push(`| \`${f.email}\` | ${f.role} | ${state} |`);
+  }
+  lines.push("");
+  lines.push(
+    "Seeded data: the accounts above (Better Auth `user` + credential " +
+      "`account` rows) — no other tables are seeded yet. Fixtures are " +
+      "idempotent (`INSERT OR IGNORE`, fixed `seed-*` ids), so data you " +
+      "create on the preview survives new pushes to this PR.",
+  );
+  return lines.join("\n") + "\n";
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes("--describe")) {
+    process.stdout.write(describeMarkdown());
+    return;
+  }
+
   const target = parseArgs(process.argv.slice(2));
   const sql = await buildSql();
 

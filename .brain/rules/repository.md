@@ -172,6 +172,7 @@ Deterministic fixtures for local dev + per-PR preview D1 databases live in [`scr
 - **Idempotency**: every insert is `INSERT OR IGNORE`, keyed on fixed `seed-*` ids (e.g. `seed-admin`, `seed-admin-account`). Safe to rerun on every `bun run dev` and every PR synchronize — never clobbers rows a human or test has since modified.
 - **IDs**: always deterministic (`seed-<name>`, `seed-<name>-account`), never random — reruns must be stable.
 - **Invocation**: `bun run db:seed` (local D1, `--local`) and `bun run db:seed:preview` (preview-env D1, `--env preview --remote`); CI runs the latter on every PR push (`.github/workflows/preview.yml`, step "Seed per-PR D1").
+- **`--describe`**: emits a markdown summary of the fixtures (accounts table + seeded-data description) — `preview.yml` embeds it in the PR sticky comment, so extending `FIXTURES` (or `describeMarkdown()` for new tables) automatically updates every future preview comment. Keep `describeMarkdown()` accurate when adding seeded tables.
 - **RULE — seed evolves with features**: every feature that adds a table or user-visible data **MUST** extend the fixtures in `scripts/seed-preview.ts` in the same diff. Reviewers rely on preview URLs having representative data — a preview with an empty DB defeats the point of per-PR previews.
 - **Never seed production** by default — the script refuses `--remote` (top-level prod D1) unless `--force-production` is also passed. That escape hatch exists for emergencies only (e.g. bootstrapping a fresh prod DB), not routine use.
 

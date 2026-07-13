@@ -75,26 +75,32 @@ jobs:
             echo "version_url=$(printf '%s' "$OUT" | grep -oE 'Version Preview URL: https://\S+' | awk '{print $NF}')"
           } >> "$GITHUB_OUTPUT"
 
+      # The seed summary comes from the seed script itself (--describe), so
+      # extending fixtures in scripts/seed-preview.ts automatically updates
+      # every future PR comment — no workflow edit needed.
+      - name: Compose PR comment
+        run: |
+          {
+            echo "### Preview deployment"
+            echo
+            echo "**${{ steps.upload.outputs.alias_url }}**"
+            echo
+            echo "Per-commit version: ${{ steps.upload.outputs.version_url }}"
+            echo "Commit: \`${{ github.sha }}\`"
+            echo
+            echo "Data: this PR gets its **own D1 database** (created when the PR"
+            echo "opens, deleted when it closes). The preview R2 bucket is shared"
+            echo "across all PR previews."
+            echo
+            bun scripts/seed-preview.ts --describe
+            echo
+            echo "No manual teardown needed — uploaded versions age out on their"
+            echo "own, and the per-PR database is deleted on close by"
+            echo "\`preview-cleanup.yml\`."
+          } > "$RUNNER_TEMP/preview-comment.md"
+
       - name: Comment preview URL on PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: preview
-          message: |
-            ### Preview deployment
-
-            **${{ steps.upload.outputs.alias_url }}**
-
-            Per-commit version: ${{ steps.upload.outputs.version_url }}
-            Commit: `${{ github.sha }}`
-
-            Data: this PR gets its **own D1 database** (created when the PR
-            opens, deleted when it closes). The preview R2 bucket is shared
-            across all PR previews.
-
-            Test accounts: `admin@preview.local` / `user@preview.local` —
-            password `Password123!` (also seeded: `banned@preview.local`,
-            same password, for testing the ban UI).
-
-            No manual teardown needed — uploaded versions age out on their
-            own, and the per-PR database is deleted on close by
-            `preview-cleanup.yml`.
+          path: ${{ runner.temp }}/preview-comment.md
