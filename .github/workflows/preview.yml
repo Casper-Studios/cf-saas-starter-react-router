@@ -48,6 +48,15 @@ jobs:
         with:
           bun-version: latest
 
+      # The job gate can only see the CLOUDFLARE_ACCOUNT_ID variable (secrets
+      # aren't readable in job-level `if`), so verify the token separately.
+      - name: Check Cloudflare credentials
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is set but the CLOUDFLARE_API_TOKEN secret is missing or empty. Set it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
@@ -70,9 +79,15 @@ jobs:
         run: |
           OUT=$(bunx wrangler versions upload --preview-alias "pr-${{ github.event.number }}" 2>&1)
           echo "$OUT"
+          ALIAS_URL=$(printf '%s' "$OUT" | grep -oE 'Version Preview Alias URL: https://\S+' | awk '{print $NF}')
+          VERSION_URL=$(printf '%s' "$OUT" | grep -oE 'Version Preview URL: https://\S+' | awk '{print $NF}')
+          if [ -z "$ALIAS_URL" ] || [ -z "$VERSION_URL" ]; then
+            echo "::error::Could not extract preview URLs from wrangler output — its format may have changed. See the log above."
+            exit 1
+          fi
           {
-            echo "alias_url=$(printf '%s' "$OUT" | grep -oE 'Version Preview Alias URL: https://\S+' | awk '{print $NF}')"
-            echo "version_url=$(printf '%s' "$OUT" | grep -oE 'Version Preview URL: https://\S+' | awk '{print $NF}')"
+            echo "alias_url=$ALIAS_URL"
+            echo "version_url=$VERSION_URL"
           } >> "$GITHUB_OUTPUT"
 
       # The seed summary comes from the seed script itself (--describe), so

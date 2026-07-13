@@ -121,9 +121,11 @@ function main(): void {
   const config = readWranglerConfig();
   const dbName = `${config.name}-db-pr-${slug}`;
 
-  const previewDb = config.env?.preview?.d1_databases?.[0];
+  const previewDb = config.env?.preview?.d1_databases?.find(
+    (db) => db.binding === "DATABASE"
+  );
   if (!previewDb) {
-    fail("wrangler.jsonc has no env.preview.d1_databases[0] to patch");
+    fail('wrangler.jsonc has no env.preview d1_databases entry with binding "DATABASE" to patch');
   }
 
   const databaseId = provisionDatabase(dbName);

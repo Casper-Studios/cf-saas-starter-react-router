@@ -297,13 +297,18 @@ async function main() {
 
   // Orphan sweep: per-PR preview databases created by CI
   // (scripts/ci/setup-preview-db.ts) that never appear in wrangler.jsonc.
-  if (perPrDatabases === null) {
+  // Re-list now that the account is resolved — the pre-confirm listing ran
+  // without an account id and may have failed (or hit the wrong account) in
+  // multi-account setups.
+  const sweepDatabases =
+    listPerPrDatabases(projectName, env) ?? perPrDatabases;
+  if (sweepDatabases === null) {
     console.log(
       "\x1b[33m⚠ Skipping per-PR preview database sweep (wrangler d1 list failed)\x1b[0m"
     );
   } else {
     const alreadyDeleted = new Set(databases.map((db) => db.database_name));
-    for (const name of perPrDatabases) {
+    for (const name of sweepDatabases) {
       if (alreadyDeleted.has(name)) continue;
       const prDbSpinner = spinner();
       prDbSpinner.start(`Deleting per-PR database: ${name}...`);
