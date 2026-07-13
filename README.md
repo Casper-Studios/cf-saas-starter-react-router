@@ -70,6 +70,7 @@ The wizard creates your D1 database, R2 bucket, optional KV namespace, generates
 ```bash
 bun install                 # also runs cf-typegen + git hooks install
 bun run db:migrate:local    # apply migrations to local D1
+bun run db:seed             # seed local D1 with admin/user/banned fixtures
 bun run dev                 # http://localhost:5173
 ```
 
@@ -302,7 +303,7 @@ init.sh               Harness bootstrap — install + migrate + typecheck + test
 bun run dev                   # Dev server (auto-runs local DB migrations) → :5173
 bun run build                 # Production build
 bun run deploy                # Build + deploy to Cloudflare Workers
-bun run preview               # Build + serve via wrangler
+bun run preview               # Build + serve locally via the Cloudflare Vite plugin (vite preview)
 
 bun run typecheck             # cf-typegen + react-router typegen + tsc -b
 bun run test                  # Vitest (one-shot)
@@ -314,6 +315,8 @@ bun run test:e2e:report       # Open last Playwright report
 bun run db:generate           # Generate Drizzle migration from schema
 bun run db:migrate:local      # Apply migrations to local D1
 bun run db:migrate:remote     # Apply migrations to remote D1
+bun run db:seed               # Seed local D1 with admin/user/banned fixtures
+bun run db:seed:preview       # Seed the preview-env D1 with the same fixtures
 bun run db:studio             # Drizzle Studio (visual DB editor)
 
 bun run cf-typegen            # Regenerate worker-configuration.d.ts
@@ -362,11 +365,15 @@ bunx wrangler d1 execute YOUR_DB_NAME --remote \
   --command "UPDATE user SET role = 'admin' WHERE email = 'user@example.com'"
 ```
 
-Or seed a test admin locally:
+Or seed the fixture accounts locally:
 
 ```bash
-bun run scripts/seed-test-admin.ts
+bun run db:seed
 ```
+
+Gives you `admin@preview.local` / `Password123!` (plus `user@preview.local`
+and `banned@preview.local`). See [Database](#database) below and
+[`.brain/rules/repository.md`](.brain/rules/repository.md) ("Seed data").
 
 ---
 
@@ -430,11 +437,53 @@ Strings live in [`app/locales/en/<namespace>.json`](app/locales/en/). Types in [
 
 ```bash
 bun run deploy                    # Build + deploy to production
-bunx wrangler versions upload     # Deploy a preview URL
-bunx wrangler versions deploy     # Promote a preview to production
+bunx wrangler versions deploy     # Promote an uploaded version to production
 ```
 
 Observability is enabled in [`wrangler.jsonc`](wrangler.jsonc) (logs, 100% head sampling). Smart placement is on.
+
+### Preview deployments (per-PR)
+
+Every pull request can get its own live preview, isolated from production.
+
+**How it works** — [`wrangler.jsonc`](wrangler.jsonc) declares a `preview` wrangler environment: its own Worker (`<name>-preview`), a shared preview R2 bucket, and a D1 binding that CI repoints at a per-PR database. [`.github/workflows/preview.yml`](.github/workflows/preview.yml) builds against that environment and uploads a Worker *version* tagged with a stable alias, `pr-<N>`, so the preview URL for a given PR doesn't change across pushes:
+
+```
+https://pr-<N>-<worker>-preview.<subdomain>.workers.dev
+```
+
+The Action also comments the URL (and a per-commit version URL) on the PR.
+
+**Data isolation** — each PR gets its **own D1 database** (`<name>-db-pr-<N>`). On PR open (and every push), [`scripts/ci/setup-preview-db.ts`](scripts/ci/setup-preview-db.ts) creates the database if needed and patches the CI checkout's `wrangler.jsonc` to point the preview `DATABASE` binding at it (the patch is never committed); CI then applies migrations **and seeds fixtures** ([`scripts/seed-preview.ts`](scripts/seed-preview.ts) `--preview`) before uploading the version, so every preview URL has representative, logged-in-ready data from the first push. On PR close, [`.github/workflows/preview-cleanup.yml`](.github/workflows/preview-cleanup.yml) deletes that database. The preview **R2 bucket is shared** across all PR previews — not per-PR, because wrangler can't delete non-empty buckets, so per-PR buckets would accumulate as orphans. `bun run teardown` also sweeps up any leftover `-db-pr-*` databases.
+
+**Test accounts** — every preview and local D1 gets the same three fixtures (`bun run db:seed` / `bun run db:seed:preview`, password `Password123!` for all):
+
+| Email | Role | Notes |
+|-------|------|-------|
+| `admin@preview.local` | admin | admin dashboard access |
+| `user@preview.local` | user | regular account |
+| `banned@preview.local` | user | `banned = true`, for testing the ban UI |
+
+Seeding is idempotent (`INSERT OR IGNORE` on fixed `seed-*` ids) — safe to rerun on every PR synchronize. See [`.brain/rules/repository.md`](.brain/rules/repository.md) ("Seed data") for the rule that new tables/features must extend these fixtures.
+
+> **Free plan note:** Cloudflare's D1 free plan caps you at 10 databases, so per-PR databases assume a paid plan. On the free plan, revert the "Provision per-PR D1" step in `preview.yml` back to migrating the shared `<name>-db-preview` database (a one-line change).
+
+**One-time enablement for your repo** — previews ship disabled. To turn them on:
+
+1. Set the repo **variable** `CLOUDFLARE_ACCOUNT_ID` (Settings → Secrets and variables → Actions → Variables tab).
+2. Set the repo **secret** `CLOUDFLARE_API_TOKEN` (same page → Secrets tab), created from the "Edit Cloudflare Workers" API token template plus `D1:Edit` added (migrations need it).
+3. `bun run setup` already provisions the `preview` Worker/R2 resources (plus the shared `-db-preview` D1 used for manual preview work) alongside production; per-PR D1 databases are created automatically by CI — there's nothing else to create.
+
+**Manual commands** — useful for a one-off preview without opening a PR:
+
+```bash
+bun run deploy:preview                                    # Build + deploy the preview Worker directly
+bun run db:migrate:preview                                # Apply migrations to the preview D1
+CLOUDFLARE_ENV=preview bun run build \
+  && bunx wrangler versions upload --preview-alias my-branch  # Build + upload a one-off preview URL
+```
+
+> **Gotcha:** `wrangler deploy --env preview` does **not** work with the Cloudflare Vite plugin. The plugin selects the environment at *build* time via the `CLOUDFLARE_ENV` env var and writes a redirected config to `build/server/wrangler.json` that has no `env` block — so any `--env` flag passed to a post-build `wrangler` command has nothing to select. Always set `CLOUDFLARE_ENV` before building instead (as `deploy:preview` and the commands above do).
 
 ---
 

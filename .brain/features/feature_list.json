@@ -1,6 +1,6 @@
 {
   "$schema": "Machine-readable feature state tracker. Source of truth for status; per-feature MD docs are source of truth for design/runtime.",
-  "updated": "2026-05-07",
+  "updated": "2026-07-11",
   "policy": {
     "one_in_progress_at_a_time": true,
     "definition_of_done": "implementation complete + verify-done passed + feature MD updated + brain coherent"
@@ -48,6 +48,17 @@
       "dependencies": ["feat-001", "feat-002"],
       "status": "shipped",
       "evidence": "shipped 2026-05-07; AnalyticsRepository runs queries with Effect.all unbounded concurrency",
+      "owners": ["sean"]
+    },
+    {
+      "id": "feat-005",
+      "name": "Preview Deployments",
+      "slug": "preview-deployments",
+      "doc": ".brain/features/preview-deployments.md",
+      "description": "Per-PR preview deployments on Cloudflare Workers: dedicated `preview` wrangler environment (isolated worker/D1/R2/workflow) + GitHub Actions workflow uploading versions with `--preview-alias pr-<N>` for stable preview URLs.",
+      "dependencies": [],
+      "status": "shipped",
+      "evidence": "shipped 2026-07-11; live-verified: per-PR D1 (pr-999 binding test), alias URL auth signup 200 on pr-test, prod signup 200; run note .brain/runs/2026-07-10-preview-deployments.md; workflows .github/workflows/preview.yml + preview-cleanup.yml",
       "owners": ["sean"]
     }
   ]

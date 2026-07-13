@@ -8,10 +8,10 @@ import { test, expect } from "@playwright/test";
  *   2. User signs out → bounced back to /login when revisiting /dashboard.
  *   3. Same user signs in with their credentials → lands on /dashboard again.
  *
- * Other surfaces (admin, file upload, analytics) are gated by an admin role
- * that has to be seeded with a direct D1 UPDATE — out of scope for an e2e
- * harness that has no seed step. Test those with unit tests + manual checks
- * until a seed hook exists.
+ * Other surfaces (admin, file upload, analytics) are gated by an admin role.
+ * `bun run db:seed` now seeds `admin@preview.local` / `Password123!` (plus
+ * a plain user and a banned user) into local D1 — use those fixtures for
+ * future admin-flow specs instead of a direct D1 UPDATE.
  */
 test.describe("Authentication", () => {
   // Each run uses a fresh email so re-runs against a persistent local D1

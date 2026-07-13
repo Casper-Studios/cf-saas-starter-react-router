@@ -12,6 +12,7 @@ import {
   confirm,
   cancel,
 } from "@clack/prompts";
+import { buildWranglerConfig, writeWranglerJsonc } from "./lib/wrangler-config";
 
 function sanitizeResourceName(name: string): string {
   return name
@@ -54,87 +55,18 @@ function generateSecureRandomString(length: number): string {
     .slice(0, length);
 }
 
-function replaceHandlebarsInFile(
-  filePath: string,
-  replacements: Record<string, string>
-) {
-  if (!fs.existsSync(filePath)) {
-    console.error(`\x1b[31mFile not found: ${filePath}\x1b[0m`);
+function updatePackageJsonName(projectName: string) {
+  const packageJsonPath = path.join(__dirname, "..", "package.json");
+
+  if (!fs.existsSync(packageJsonPath)) {
+    console.error(`\x1b[31mFile not found: ${packageJsonPath}\x1b[0m`);
     return;
   }
 
-  let content = fs.readFileSync(filePath, "utf-8");
-
-  for (const [key, value] of Object.entries(replacements)) {
-    const regex = new RegExp(`{{${key}}}`, "g");
-    content = content.replace(regex, value);
-  }
-
-  fs.writeFileSync(filePath, content);
-  console.log(`\x1b[32m✓ Updated ${path.basename(filePath)}\x1b[0m`);
-}
-
-function createWranglerJson(
-  projectName: string,
-  dbName: string,
-  dbId: string,
-  bucketName: string
-) {
-  const wranglerJsonPath = path.join(__dirname, "..", "wrangler.jsonc");
-
-  const wranglerConfig = {
-    name: projectName,
-    main: "workers/app.ts",
-    compatibility_date: "2025-03-25",
-    compatibility_flags: ["nodejs_compat"],
-    assets: {
-      directory: "build/client",
-      binding: "ASSETS",
-    },
-    placement: {
-      mode: "smart",
-    },
-    d1_databases: [
-      {
-        binding: "DATABASE",
-        database_name: dbName,
-        database_id: dbId,
-        migrations_dir: "./drizzle",
-      },
-    ],
-    r2_buckets: [
-      {
-        binding: "BUCKET",
-        bucket_name: bucketName,
-      },
-    ],
-    workflows: [
-      {
-        binding: "EXAMPLE_WORKFLOW",
-        name: `${projectName}-example-workflow`,
-        class_name: "ExampleWorkflow",
-      },
-    ],
-    ai: {
-      binding: "AI",
-    },
-    observability: {
-      logs: {
-        enabled: true,
-        head_sampling_rate: 1,
-        invocation_logs: true,
-        persist: true,
-      },
-    },
-  };
-
-  const jsonContent =
-    "// Secrets to be set via 'wrangler secret put BETTER_AUTH_SECRET'\n" +
-    JSON.stringify(wranglerConfig, null, 2) +
-    "\n";
-
-  fs.writeFileSync(wranglerJsonPath, jsonContent);
-  console.log("\x1b[32m✓ Created wrangler.jsonc\x1b[0m");
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+  pkg.name = projectName;
+  fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+  console.log(`\x1b[32m✓ Updated ${path.basename(packageJsonPath)}\x1b[0m`);
 }
 
 function removeWranglerFromGitignore() {
@@ -319,33 +251,6 @@ async function createBucket(
   }
 }
 
-async function createKVNamespace(
-  kvName: string,
-  accountId?: string
-): Promise<void> {
-  const kvSpinner = spinner();
-  kvSpinner.start(`Creating KV namespace: ${kvName}...`);
-
-  const env = accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined;
-  const kvOutput = executeCommand(
-    `wrangler kv namespace create ${kvName}`,
-    true,
-    env
-  );
-
-  if (kvOutput === undefined || typeof kvOutput !== "string") {
-    kvSpinner.stop(`\x1b[33m⚠ KV namespace might already exist\x1b[0m`);
-    return;
-  }
-
-  const matchResult = kvOutput.match(/id = "([^"]+)"/);
-  if (matchResult && matchResult.length === 2) {
-    kvSpinner.stop(`\x1b[32m✓ KV namespace created\x1b[0m`);
-  } else {
-    kvSpinner.stop(`\x1b[33m⚠ KV namespace creation status unknown\x1b[0m`);
-  }
-}
-
 async function setupAuthentication(): Promise<{
   betterAuthSecret: string;
 }> {
@@ -382,7 +287,7 @@ function createEnvFile(betterAuthSecret: string) {
   console.log("\x1b[32m✓ Created .env file\x1b[0m");
 }
 
-async function runDatabaseMigrations(dbName: string, accountId?: string) {
+async function runDatabaseMigrations(accountId?: string) {
   const env = accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined;
 
   const generateSpinner = spinner();
@@ -393,20 +298,29 @@ async function runDatabaseMigrations(dbName: string, accountId?: string) {
   const localSpinner = spinner();
   localSpinner.start("Applying local migrations...");
   executeCommand(
-    `bunx wrangler d1 migrations apply "${dbName}" --local`,
+    `bunx wrangler d1 migrations apply DATABASE --local`,
     true,
     env
   );
   localSpinner.stop("\x1b[32m✓ Local migrations applied\x1b[0m");
 
   const remoteSpinner = spinner();
-  remoteSpinner.start("Applying remote migrations...");
+  remoteSpinner.start("Applying remote migrations (production)...");
   executeCommand(
-    `bunx wrangler d1 migrations apply "${dbName}" --remote`,
+    `bunx wrangler d1 migrations apply DATABASE --remote`,
     true,
     env
   );
-  remoteSpinner.stop("\x1b[32m✓ Remote migrations applied\x1b[0m");
+  remoteSpinner.stop("\x1b[32m✓ Production migrations applied\x1b[0m");
+
+  const previewSpinner = spinner();
+  previewSpinner.start("Applying remote migrations (preview)...");
+  executeCommand(
+    `bunx wrangler d1 migrations apply DATABASE --env preview --remote`,
+    true,
+    env
+  );
+  previewSpinner.stop("\x1b[32m✓ Preview migrations applied\x1b[0m");
 }
 
 // Main setup function
@@ -453,13 +367,16 @@ async function main() {
 
   // Generate resource names based on project name
   const dbName = `${projectName}-db`;
+  const previewDbName = `${dbName}-preview`;
   const bucketName = `${projectName}-bucket`;
-  const kvName = `${projectName}-kv`;
+  const previewBucketName = `${bucketName}-preview`;
 
   console.log("\n\x1b[33mResource names:\x1b[0m");
   console.log(`  • Project: ${projectName}`);
   console.log(`  • Database: ${dbName}`);
+  console.log(`  • Database (preview): ${previewDbName}`);
   console.log(`  • Bucket: ${bucketName}`);
+  console.log(`  • Bucket (preview): ${previewBucketName}`);
 
   const shouldContinue = await confirm({
     message: "Continue with these names?",
@@ -475,8 +392,10 @@ async function main() {
   console.log("\n\x1b[36m☁️  Step 2: Creating Cloudflare Resources\x1b[0m");
 
   let dbId: string;
+  let previewDbId: string;
   try {
     dbId = await createDatabase(dbName, accountId);
+    previewDbId = await createDatabase(previewDbName, accountId);
   } catch (error) {
     console.error("\x1b[31mError creating database:", error, "\x1b[0m");
     cancel("Operation cancelled.");
@@ -484,16 +403,7 @@ async function main() {
   }
 
   await createBucket(bucketName, accountId);
-
-  // Optionally create KV namespace
-  const wantKV = await confirm({
-    message: "Create KV namespace? (not required for basic setup)",
-    initialValue: false,
-  });
-
-  if (wantKV) {
-    await createKVNamespace(kvName, accountId);
-  }
+  await createBucket(previewBucketName, accountId);
 
   // Step 3: Set up authentication
   console.log("\n\x1b[36m🔐 Step 3: Authentication Setup\x1b[0m");
@@ -504,19 +414,20 @@ async function main() {
   // Step 4: Create configuration files
   console.log("\n\x1b[36m📝 Step 4: Creating Configuration Files\x1b[0m");
 
-  // Create wrangler.jsonc from scratch
-  createWranglerJson(projectName, dbName, dbId, bucketName);
+  // Overwrite the committed dummy wrangler.jsonc with real resource IDs
+  const wranglerConfig = buildWranglerConfig({
+    projectName,
+    dbId,
+    previewDbId,
+  });
+  writeWranglerJsonc(wranglerConfig);
+  console.log("\x1b[32m✓ Updated wrangler.jsonc\x1b[0m");
 
-  // Remove wrangler.jsonc from .gitignore since it's now configured
+  // Remove wrangler.jsonc from .gitignore, if it's still listed there
   removeWranglerFromGitignore();
 
-  // Update package.json with database name
-  const packageJsonPath = path.join(__dirname, "..", "package.json");
-  const replacements = {
-    projectName: sanitizeResourceName(projectName),
-    dbName,
-  };
-  replaceHandlebarsInFile(packageJsonPath, replacements);
+  // Update package.json's "name" field with the sanitized project name
+  updatePackageJsonName(projectName);
 
   // Step 5: Install dependencies
   console.log("\n\x1b[36m📦 Step 5: Installing Dependencies\x1b[0m");
@@ -547,32 +458,17 @@ async function main() {
 
   // Step 7: Run database migrations
   console.log("\n\x1b[36m🗄️  Step 7: Database Migrations\x1b[0m");
-  await runDatabaseMigrations(dbName, accountId);
+  await runDatabaseMigrations(accountId);
 
-  // Step 8: Upload secrets
-  console.log("\n\x1b[36m🔑 Step 8: Uploading Secrets\x1b[0m");
-  const secretSpinner = spinner();
-  secretSpinner.start("Uploading BETTER_AUTH_SECRET...");
-  const secretResult = executeCommand(
-    `echo "${betterAuthSecret}" | wrangler secret put BETTER_AUTH_SECRET`,
+  // Step 8: Deploy to Cloudflare (production)
+  console.log("\n\x1b[36m🚀 Step 8: Deploy to Cloudflare (production)\x1b[0m");
+  const deploySpinner = spinner();
+  deploySpinner.start("Building and deploying to Cloudflare Workers...");
+  const deployResult = executeCommand(
+    "bun run deploy",
     true,
     accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined
   );
-  if (secretResult && typeof secretResult === "object" && secretResult.error) {
-    secretSpinner.stop("\x1b[31m✗ Failed to upload secret\x1b[0m");
-    console.error(`\x1b[31m${secretResult.message}\x1b[0m`);
-    console.log(
-      "\x1b[33mYou can upload it manually later with: wrangler secret put BETTER_AUTH_SECRET\x1b[0m"
-    );
-  } else {
-    secretSpinner.stop("\x1b[32m✓ BETTER_AUTH_SECRET uploaded\x1b[0m");
-  }
-
-  // Step 9: Deploy to Cloudflare
-  console.log("\n\x1b[36m🚀 Step 9: Deploy to Cloudflare\x1b[0m");
-  const deploySpinner = spinner();
-  deploySpinner.start("Building and deploying to Cloudflare Workers...");
-  const deployResult = executeCommand("bun run deploy", true, accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined);
 
   if (deployResult && typeof deployResult === "object" && deployResult.error) {
     deploySpinner.stop("\x1b[31m✗ Deployment failed\x1b[0m");
@@ -584,11 +480,99 @@ async function main() {
     deploySpinner.stop("\x1b[32m✓ Deployed successfully! 🎉\x1b[0m");
   }
 
+  // Step 9: Deploy to Cloudflare (preview)
+  console.log("\n\x1b[36m🚀 Step 9: Deploy to Cloudflare (preview)\x1b[0m");
+  const deployPreviewSpinner = spinner();
+  deployPreviewSpinner.start("Building and deploying the preview worker...");
+  const deployPreviewResult = executeCommand(
+    "bun run deploy:preview",
+    true,
+    accountId ? { CLOUDFLARE_ACCOUNT_ID: accountId } : undefined
+  );
+
+  if (
+    deployPreviewResult &&
+    typeof deployPreviewResult === "object" &&
+    deployPreviewResult.error
+  ) {
+    deployPreviewSpinner.stop("\x1b[31m✗ Preview deployment failed\x1b[0m");
+    console.error(`\x1b[31m${deployPreviewResult.message}\x1b[0m`);
+    console.log(
+      "\x1b[33mYou can deploy it manually later with: bun run deploy:preview\x1b[0m"
+    );
+  } else {
+    deployPreviewSpinner.stop("\x1b[32m✓ Preview worker deployed! 🎉\x1b[0m");
+  }
+
+  // Step 10: Upload secrets
+  // Secrets can only be uploaded to a worker that already exists — hence
+  // this step runs after both workers have been deployed above.
+  console.log("\n\x1b[36m🔑 Step 10: Uploading Secrets\x1b[0m");
+
+  function uploadSecret(label: string, envFlag: string) {
+    const secretSpinner = spinner();
+    secretSpinner.start(`Uploading BETTER_AUTH_SECRET (${label})...`);
+    const execEnv = accountId
+      ? { CLOUDFLARE_ACCOUNT_ID: accountId }
+      : undefined;
+
+    let result = executeCommand(
+      `echo "${betterAuthSecret}" | wrangler secret put BETTER_AUTH_SECRET${envFlag}`,
+      true,
+      execEnv
+    );
+
+    // `wrangler secret put` refuses when the worker's latest *uploaded*
+    // version isn't the *deployed* one (happens once PR previews have run
+    // `wrangler versions upload`). `versions secret put` handles that case:
+    // it creates a new version with the secret, which subsequent version
+    // uploads inherit.
+    if (
+      result &&
+      typeof result === "object" &&
+      result.error &&
+      String(result.message).includes("isn't currently deployed")
+    ) {
+      secretSpinner.message(
+        `Uploading BETTER_AUTH_SECRET (${label}) via versions secret put...`
+      );
+      result = executeCommand(
+        `echo "${betterAuthSecret}" | wrangler versions secret put BETTER_AUTH_SECRET${envFlag}`,
+        true,
+        execEnv
+      );
+    }
+
+    if (result && typeof result === "object" && result.error) {
+      secretSpinner.stop(`\x1b[31m✗ Failed to upload secret (${label})\x1b[0m`);
+      console.error(`\x1b[31m${result.message}\x1b[0m`);
+      console.log(
+        `\x1b[33mYou can upload it manually later with: wrangler secret put BETTER_AUTH_SECRET${envFlag}\x1b[0m`
+      );
+    } else {
+      secretSpinner.stop(
+        `\x1b[32m✓ BETTER_AUTH_SECRET uploaded (${label})\x1b[0m`
+      );
+    }
+  }
+
+  uploadSecret("production", "");
+  uploadSecret("preview", " --env preview");
+
   // Final instructions
   console.log("\n\x1b[36m✅ Setup Complete!\x1b[0m\n");
   console.log("\x1b[32mNext steps:\x1b[0m");
   console.log("  1. For local development:");
   console.log("     \x1b[33mbun run dev\x1b[0m\n");
+  console.log("  2. Your production site is live at:");
+  console.log(
+    `     \x1b[33mhttps://${projectName}.<subdomain>.workers.dev\x1b[0m\n`
+  );
+  console.log("  3. Preview deploys happen automatically per-PR via:");
+  console.log("     \x1b[33m.github/workflows/preview.yml\x1b[0m");
+  console.log(
+    "     (requires the repo variable \x1b[33mCLOUDFLARE_ACCOUNT_ID\x1b[0m and the secret \x1b[33mCLOUDFLARE_API_TOKEN\x1b[0m to be set on GitHub)\n"
+  );
 
   outro("✨ Happy building! 🎉");
 }

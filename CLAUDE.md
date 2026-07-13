@@ -105,6 +105,7 @@ Direct pointers (each rule is the canonical "do / don't" for one layer):
 bun run dev               # Dev server (auto-runs local DB migrations) → http://localhost:5173
 bun run build             # Production build
 bun run deploy            # Build + deploy to Cloudflare Workers
+bun run deploy:preview    # Build with CLOUDFLARE_ENV=preview + deploy the -preview worker
 bun run typecheck         # Full typecheck (cf-typegen + react-router typegen + tsc)
 bun run test              # Vitest unit tests (one-shot)
 bun run test:watch        # Vitest watch mode
@@ -112,6 +113,9 @@ bun run test:e2e          # Playwright e2e tests
 bun run db:generate       # Generate Drizzle migration
 bun run db:migrate:local  # Apply migrations to local D1
 bun run db:migrate:remote # Apply migrations to remote D1
+bun run db:migrate:preview # Apply migrations to the preview-env D1
+bun run db:seed           # Seed local D1 with admin/user/banned fixtures
+bun run db:seed:preview   # Seed the preview-env D1 with the same fixtures
 bun run db:studio         # Drizzle Studio
 ```
 
@@ -130,6 +134,7 @@ bun run db:studio         # Drizzle Studio
 | New UI component / form | `rules/frontend.md` |
 | New CF binding | `rules/cloudflare.md` + `high-level-architecture/architecture.md` |
 | New / changed feature | `features/<slug>.md` (use `_TEMPLATE.md`) |
+| New / changed DB table or feature with user-visible data | extend fixtures in `scripts/seed-preview.ts` (see `rules/repository.md` "Seed data") |
 | Architectural shift | append to `CHANGELOG.md` |
 | Stakeholder decision | drop file in `transcripts/` or `emails/`, link from `CHANGELOG.md` |
 

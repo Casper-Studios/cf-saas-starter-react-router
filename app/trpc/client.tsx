@@ -20,10 +20,10 @@ function getQueryClient() {
 function getUrl() {
   const base = (() => {
     if (typeof window !== 'undefined') return '';
-    // TODO:- Get the correct URL from the environment variables
-    // if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-
-    return 'http://localhost:5173';
+    // SSR never issues these requests (queries hydrate client-side), but the
+    // link still needs an absolute URL to construct. VITE_AUTH_URL is baked in
+    // at build time; localhost covers `bun run dev`.
+    return import.meta.env.VITE_AUTH_URL ?? 'http://localhost:5173';
   })();
   return `${base}/api/trpc`;
 }
