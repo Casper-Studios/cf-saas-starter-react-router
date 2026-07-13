@@ -21,6 +21,15 @@
 
 ---
 
+## 2026-07-13 — feat-005 merged + released v1.1.0 — session end
+- branch: `main` @ 4f83efc (PR #7 merged)
+- in-progress feature: none
+- run note: `.brain/runs/2026-07-10-preview-deployments.md` (closed)
+- shipped: v1.1.0 "Every PR Gets Its Own SaaS" — per-PR preview deploys w/ isolated seeded D1, full lifecycle verified on PR #7 (open→deploy→login→close→cleanup→reopen)
+- outstanding: roll CF API token (leaked to session transcript); decide keep-vs-teardown of session CF resources; run-note final edit uncommitted on main
+
+---
+
 ## 2026-07-11 — feat-005 preview-deployments shipped
 - branch: `main`
 - in-progress feature: none

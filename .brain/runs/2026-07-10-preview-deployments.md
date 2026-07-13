@@ -143,7 +143,7 @@ Seed fixtures added (user request): `scripts/seed-preview.ts` (idempotent, admin
 
 _Closed: 2026-07-11_
 
-- Shipped: working tree on `main` (commit pending user go-ahead; teardown restores dummy wrangler.jsonc + package name before commit of generic boilerplate diff)
+- Shipped: PR #7 merged to `main` (4f83efc), released as **v1.1.0 — "Every PR Gets Its Own SaaS"** (https://github.com/SeanningTatum/cf-saas-starter-react-router/releases/tag/v1.1.0). Merge-triggered Preview Cleanup verified (pr-7 DB deleted).
 - Brain docs updated: rules/cloudflare.md, integrations.md, CHANGELOG.md, features/preview-deployments.md + feature_list.json (shipped), CLAUDE.md/AGENTS.md commands
 - Left undone: session-resource teardown (user runs `bun run teardown` — interactive), GitHub repo var/secret for CI previews on the real repo
 - Surprises worth remembering: (1) `wrangler deploy --env X` silently deploys top-level env under @cloudflare/vite-plugin — env is build-time (`CLOUDFLARE_ENV`); (2) preview alias URLs work with Workflows binding despite documented DO restriction; (3) `secret put` refuses when latest uploaded version ≠ deployed — `versions secret put` is the versions-safe path; (4) worker versions carry their own bindings → per-PR D1 with a single preview worker; (5) alias re-point after upload takes ~1 min (transient 1101/500).
