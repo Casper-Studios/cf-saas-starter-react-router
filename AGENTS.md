@@ -23,9 +23,9 @@ For trivial edits (typo, comment, one-line change), bookends are optional — bu
 | Command | Purpose |
 |---------|---------|
 | [`/start-task`](.claude/commands/start-task.md) | Kickoff — `init.sh --baseline` + brain read + framing + run note + progress entry. Refuses if scope policy violated. |
-| [`/verify-done`](.claude/commands/verify-done.md) | Full verification — typecheck/test/e2e/build/UI/brain coherence/non-negotiables. |
+| [`/verify-done`](.claude/commands/verify-done.md) | Full verification — typecheck/test/e2e smoke/build/feature-verification/brain coherence/non-negotiables. |
 | [`/ship-feature`](.claude/commands/ship-feature.md) | Close out — verify-done + flip `feature_list.json` + update feature MD + close run note + harness-check. |
-| [`/harness-check`](.claude/commands/harness-check.md) | Validate 10 harness invariants via [`scripts/harness-check.sh`](scripts/harness-check.sh) (deterministic, no LLM, exits non-zero on drift). |
+| [`/harness-check`](.claude/commands/harness-check.md) | Validate 11 harness invariants via [`scripts/harness-check.sh`](scripts/harness-check.sh) (deterministic, no LLM, exits non-zero on drift). |
 
 ## Harness — what holds this together
 
@@ -80,12 +80,12 @@ Direct pointers (each rule is the canonical "do / don't" for one layer):
 
 | # | Rule | Layer |
 |---|------|-------|
-| 1 | [`.brain/rules/frontend.md`](.brain/rules/frontend.md) | UI, forms, modals, Tailwind, manual Playwright verification |
+| 1 | [`.brain/rules/frontend.md`](.brain/rules/frontend.md) | UI, forms, modals, Tailwind, feature-verifier browser walk |
 | 2 | [`.brain/rules/cloudflare.md`](.brain/rules/cloudflare.md) | Workers runtime, bindings, env, Workflows declaration |
 | 3 | [`.brain/rules/repository.md`](.brain/rules/repository.md) | `Effect.Service` repos, Drizzle schema, repo inputs |
 | 4 | [`.brain/rules/services.md`](.brain/rules/services.md) | Effect Tags + Layers, Better Auth, Workflows, Session, Logger |
 | 5 | [`.brain/rules/routes.md`](.brain/rules/routes.md) | tRPC procedures via `runProcedure`, React Router loaders, auth gating |
-| 6 | [`.brain/rules/library.md`](.brain/rules/library.md) | Helpers, Effect Schema, effect-utils, Vitest, Playwright e2e |
+| 6 | [`.brain/rules/library.md`](.brain/rules/library.md) | Helpers, Effect Schema, effect-utils, Vitest, Playwright CLI (smoke specs + feature verification) |
 | 7 | [`.brain/rules/errors.md`](.brain/rules/errors.md) | Tagged errors, `tagToTRPC`, error helpers |
 
 ## Five non-negotiables
